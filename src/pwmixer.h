@@ -5,22 +5,36 @@
 #include <stdint.h>
 #include <stdatomic.h>
 
-#define PWM_OUTPUT_BUFFER_SIZE 8192
+#define PWM_BUFFER_SIZE 8192
 
-typedef struct pwm_Output {
-	struct pw_stream *stream;
+typedef struct pwm_Input pwm_Input;
+typedef struct pwm_Output pwm_Output;
+typedef struct pwm_Connection pwm_Connection;
+
+struct pwm_Connection {
+	pwm_Input *input;
+	pwm_Output *output;
 
 	atomic_bool bufferAvailable;
 	uint8_t *buffer;
 	size_t bufferSize;
-} pwm_Output;
+};
 
-typedef struct pwm_Input {
+struct pwm_Output {
 	struct pw_stream *stream;
+	struct spa_hook hook;
 
-	pwm_Output **outputs;
-	uint32_t outputCount;
-} pwm_Input;
+	pwm_Connection **connections;
+	uint32_t connectionCount;
+};
+
+struct pwm_Input {
+	struct pw_stream *stream;
+	struct spa_hook hook;
+
+	pwm_Connection **connections;
+	uint32_t connectionCount;
+};
 
 typedef struct pwm_Data {
 	struct pw_main_loop *mainLoop;
@@ -45,6 +59,7 @@ void pwm_sysRun();
 void pwm_sysDisconnect();
 
 void pwm_ioConnect(pwm_Input *input, pwm_Output *output);
+void pwm_ioDisconnect(pwm_Input *input, pwm_Output *output);
 
 pwm_Input *pwm_ioCreateInput(const char *name);
 void pwm_ioProcessInput(void *data);

@@ -10,10 +10,10 @@ int main(int argc, char *argv[]) {
 	pwm_Input *in = pwm_ioCreateInput("To out + out2");
 	pwm_Input *in2 = pwm_ioCreateInput("To out2 only");
 	pwm_Output *out = pwm_ioCreateOutput("Out");
-	//pwm_Output *out2 = pwm_ioCreateOutput("Out2");
+	pwm_Output *out2 = pwm_ioCreateOutput("Out2");
 	pwm_ioConnect(in, out);
-	//pwm_ioConnect(in, out2);
-	pwm_ioConnect(in2, out);
+	pwm_ioConnect(in, out2);
+	pwm_ioConnect(in2, out2);
 
 	pwm_sysRun();
 	pwm_sysDisconnect();
