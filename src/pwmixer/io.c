@@ -4,9 +4,14 @@
 
 #include "pwmixer.h"
 
+static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_stream_state state, const char *error) {
+	printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);
+}
+
 static const struct pw_stream_events inputStreamEvents = {
 	PW_VERSION_STREAM_EVENTS,
-	.process = pwm_ioProcessInput
+	.process = pwm_ioProcessInput,
+	.state_changed = streamStateChanged
 };
 
 static const struct pw_stream_events outputStreamEvents = {
@@ -79,10 +84,6 @@ void pwm_ioProcessOutput(void *data) {
 	pw_stream_queue_buffer(output->stream, buf);
 }
 
-static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_stream_state state, const char *error) {
-	printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);
-}
-
 pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
 	struct pw_properties *streamProps;
 	if(isSink) {
@@ -108,13 +109,8 @@ pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
 	input->connections = NULL;
 	input->connectionCount = 0;
 
-	struct pw_stream_events *events = calloc(1, sizeof(struct pw_stream_events));
-	events->version = PW_VERSION_STREAM_EVENTS;
-	events->process = pwm_ioProcessInput;
-	events->state_changed = streamStateChanged;
-
 	struct pw_stream *stream = pw_stream_new(pwm_data->core, name, streamProps);
-	pw_stream_add_listener(stream, &input->hook, events, input);
+	pw_stream_add_listener(stream, &input->hook, &inputStreamEvents, input);
 	printf("STREAM: %p\n", stream);
 	input->stream = stream;
 
