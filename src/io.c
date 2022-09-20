@@ -106,16 +106,29 @@ static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_str
 	printf("%p changed state from %i to %i: %s\n", data, old, state, error);
 }
 
-pwm_Input *pwm_ioCreateInput(const char *name) {
+pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
 	printf("CREATE: %s\n", name);
 	//pw_loop_signal_event(pw_main_loop_get_loop(data->mainLoop), NULL);
 
-	struct pw_properties *streamProps = pw_properties_new(
-		PW_KEY_MEDIA_TYPE, "Audio",
-		PW_KEY_MEDIA_CATEGORY, "Capture",
-		//PW_KEY_MEDIA_CLASS, "Audio/Sink",
-		PW_KEY_MEDIA_ROLE, "Music",
-		NULL);
+	struct pw_properties *streamProps;
+	if(isSink) {
+		streamProps = pw_properties_new(
+			PW_KEY_MEDIA_TYPE, "Audio",
+			PW_KEY_MEDIA_CATEGORY, "Capture",
+			PW_KEY_MEDIA_ROLE, "Music",
+			PW_KEY_MEDIA_CLASS, "Audio/Sink",
+			PW_KEY_NODE_NAME, name,
+			PW_KEY_NODE_NICK, name,
+			PW_KEY_NODE_DESCRIPTION, name,
+			NULL);
+	}else {
+		streamProps = pw_properties_new(
+			PW_KEY_MEDIA_TYPE, "Audio",
+			PW_KEY_MEDIA_CATEGORY, "Capture",
+			PW_KEY_MEDIA_ROLE, "Music",
+			NULL);
+	}
+
 
 	pwm_Input *input = malloc(sizeof(pwm_Input));
 	input->connections = NULL;
@@ -142,21 +155,34 @@ pwm_Input *pwm_ioCreateInput(const char *name) {
 	pw_stream_connect(stream,
 		PW_DIRECTION_INPUT,
 		PW_ID_ANY,
-		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS /*| PW_STREAM_FLAG_RT_PROCESS*/,
+		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
 		params, 1);
 
 	return input;
 }
 
-pwm_Output *pwm_ioCreateOutput(const char *name) {
+pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource) {
 	printf("OUTCREATE: %s\n", name);
 	//pw_loop_signal_event(pw_main_loop_get_loop(data->mainLoop), NULL);
 
-	struct pw_properties *streamProps = pw_properties_new(
-		PW_KEY_MEDIA_TYPE, "Audio",
-		PW_KEY_MEDIA_CATEGORY, "Capture",
-		PW_KEY_MEDIA_ROLE, "Music",
-		NULL);
+	struct pw_properties *streamProps;
+	if(isSource){
+		streamProps = pw_properties_new(
+			PW_KEY_MEDIA_TYPE, "Audio",
+			PW_KEY_MEDIA_CATEGORY, "Capture",
+			PW_KEY_MEDIA_ROLE, "Music",
+			PW_KEY_MEDIA_CLASS, "Audio/Source",
+			PW_KEY_NODE_NAME, name,
+			PW_KEY_NODE_NICK, name,
+			PW_KEY_NODE_DESCRIPTION, name,
+			NULL);
+	}else {
+		streamProps = pw_properties_new(
+			PW_KEY_MEDIA_TYPE, "Audio",
+			PW_KEY_MEDIA_CATEGORY, "Capture",
+			PW_KEY_MEDIA_ROLE, "Music",
+			NULL);
+	}
 
 	pwm_Output *output = malloc(sizeof(pwm_Output));
 	output->connections = NULL;
@@ -178,7 +204,7 @@ pwm_Output *pwm_ioCreateOutput(const char *name) {
 	pw_stream_connect(stream,
 		PW_DIRECTION_OUTPUT,
 		PW_ID_ANY,
-		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS /*| PW_STREAM_FLAG_RT_PROCESS*/,
+		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
 		params, 1);
 
 	return output;

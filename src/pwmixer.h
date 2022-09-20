@@ -61,10 +61,10 @@ void pwm_sysDisconnect();
 void pwm_ioConnect(pwm_Input *input, pwm_Output *output);
 void pwm_ioDisconnect(pwm_Input *input, pwm_Output *output);
 
-pwm_Input *pwm_ioCreateInput(const char *name);
+pwm_Input *pwm_ioCreateInput(const char *name, bool isSink);
 void pwm_ioProcessInput(void *data);
 
-pwm_Output *pwm_ioCreateOutput(const char *name);
+pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource);
 void pwm_ioProcessOutput(void *data);
 
 #endif
