@@ -4,25 +4,6 @@
 
 pwm_Data *pwm_data;
 
-int main(int argc, char *argv[]) {
-	pwm_sysConnect(argc, argv);
-
-	pwm_Input *in = pwm_ioCreateInput("To out + out2", false);
-	pwm_Input *in2 = pwm_ioCreateInput("To out2 only", true);
-	pwm_Output *out = pwm_ioCreateOutput("Out", true);
-	pwm_Output *out2 = pwm_ioCreateOutput("Out2", false);
-	pwm_ioConnect(in, out);
-	pwm_ioConnect(in, out2);
-	pwm_ioConnect(in2, out2);
-
-	pwm_sysRun();
-	pwm_sysDisconnect();
-}
-
-void ayyo() {
-	printf("AYYO\n");
-}
-
 void pwm_sysConnect(int argc, char **argv) {
 	pw_init(&argc, &argv);
 
@@ -34,7 +15,6 @@ void pwm_sysConnect(int argc, char **argv) {
 	printf("Connected to PipeWire\n");
 	pw_loop_add_signal(pw_main_loop_get_loop(pwm_data->mainLoop), SIGINT, pwm_sysDisconnect, NULL);
 	pw_loop_add_signal(pw_main_loop_get_loop(pwm_data->mainLoop), SIGTERM, pwm_sysDisconnect, NULL);
-	//pw_loop_add_signal(pw_main_loop_get_loop(data->mainLoop), PWM_CREATE_INPUT, ayyo, NULL);
 }
 
 void pwm_sysRun() {

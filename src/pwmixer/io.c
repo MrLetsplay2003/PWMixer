@@ -16,7 +16,6 @@ static const struct pw_stream_events outputStreamEvents = {
 
 void pwm_ioProcessInput(void *data) {
 	pwm_Input *input = data;
-	printf("PROCESS in stream: %p\n", input->stream);
 
 	struct pw_buffer *buf = pw_stream_dequeue_buffer(input->stream);
 	if(!buf) {
@@ -26,14 +25,10 @@ void pwm_ioProcessInput(void *data) {
 
 	for(uint32_t i = 0; i < input->connectionCount; i++) {
 		pwm_Connection *con = input->connections[i];
-		//while(!con->bufferAvailable); // TODO: ?
-		con->bufferAvailable = false;
 		size_t nWrite = SPA_MIN(PWM_BUFFER_SIZE - con->bufferSize, buf->buffer->datas[0].chunk->size);
-		//printf("A %i, B %i\n", PWM_BUFFER_SIZE - con->bufferSize, buf->buffer->datas[0].chunk->size);
+
 		memcpy(con->buffer + con->bufferSize, buf->buffer->datas[0].data, nWrite);
 		con->bufferSize += nWrite;
-		con->bufferAvailable = true;
-		//printf("AFTER %p: %i, %i\n", input, con->bufferSize, nWrite);
 	}
 
 	pw_stream_queue_buffer(input->stream, buf);
@@ -41,12 +36,11 @@ void pwm_ioProcessInput(void *data) {
 
 void pwm_ioProcessOutput(void *data) {
 	pwm_Output *output = data;
-	//printf("PROCESS out stream: %p\n", output->stream);
 
 	struct pw_buffer *buf = pw_stream_dequeue_buffer(output->stream);
 	if(!buf) return;
 
-	if(output->connectionCount == 0) {
+	if(output->connectionCount == 0 || buf->requested == 0) {
 		pw_stream_queue_buffer(output->stream, buf);
 		return;
 	}
@@ -55,61 +49,41 @@ void pwm_ioProcessOutput(void *data) {
 	if ((streamDat = buf->buffer->datas[0].data) == NULL)
 		return;
 
-	uint32_t stride = sizeof(float) * 2;
+	uint32_t stride = sizeof(float) * PWM_CHANNELS;
 	uint32_t n_frames = SPA_MIN(buf->requested, buf->buffer->datas[0].maxsize / stride);
 
 	for(uint32_t i = 0; i < output->connectionCount; i++) {
 		pwm_Connection *con = output->connections[i];
-		//while(!con->bufferAvailable); // TODO: ?
-		con->bufferAvailable = false;
 		n_frames = SPA_MIN(con->bufferSize / stride, n_frames);
-		con->bufferAvailable = true;
 	}
 
-	memset(streamDat, 0, n_frames * stride);
+	uint32_t nRead = n_frames * stride;
 
-	//printf("#FRAMES: %i %i %i %i\n", n_frames, output->connections[0]->bufferSize / stride, output->connections[1]->bufferSize / stride, buf->requested);
+	memset(streamDat, 0, nRead);
 
 	for(uint32_t i = 0; i < output->connectionCount; i++) {
 		pwm_Connection *con = output->connections[i];
-		//while(!con->bufferAvailable);
-		con->bufferAvailable = false;
 
-		for(size_t i = 0; i < n_frames * 2; i++) {
-			*(((float *) streamDat) + i) += *(((float *) con->buffer) + i) / output->connectionCount;
+		for(size_t i = 0; i < n_frames * PWM_CHANNELS; i++) {
+			*(((float *) streamDat) + i) += *(((float *) con->buffer) + i);
 		}
 
-		//memcpy(streamDat, con->buffer, n_frames * stride);
-
-		con->bufferSize -= n_frames * stride;
-		memmove(con->buffer, con->buffer + n_frames * stride, n_frames * stride); // Move buffer
-
-		con->bufferAvailable = true;
+		con->bufferSize -= nRead;
+		memmove(con->buffer, con->buffer + nRead, con->bufferSize); // Move remaining buffer
 	}
-
-	//memcpy(streamDat, output->buffer, n_frames * stride);
-	//output->bufferSize -= n_frames * stride;
-	//printf("Write %i frames buf sz: %i\n", n_frames, output->bufferSize);
-	//memmove(output->buffer, output->buffer + n_frames * stride, n_frames * stride); // Move buffer
-	//output->bufferAvailable = true;
 
 	buf->buffer->datas[0].chunk->offset = 0;
 	buf->buffer->datas[0].chunk->stride = stride;
 	buf->buffer->datas[0].chunk->size = n_frames * stride;
 
-	printf("DONE\n");
-
 	pw_stream_queue_buffer(output->stream, buf);
 }
 
 static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_stream_state state, const char *error) {
-	printf("%p changed state from %i to %i: %s\n", data, old, state, error);
+	printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);
 }
 
 pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
-	printf("CREATE: %s\n", name);
-	//pw_loop_signal_event(pw_main_loop_get_loop(data->mainLoop), NULL);
-
 	struct pw_properties *streamProps;
 	if(isSink) {
 		streamProps = pw_properties_new(
@@ -149,8 +123,8 @@ pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
 	const struct spa_pod *params[1];
 	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &SPA_AUDIO_INFO_RAW_INIT(
 		.format = SPA_AUDIO_FORMAT_F32,
-		.channels = 2,
-		.rate = 44100
+		.channels = PWM_CHANNELS,
+		.rate = PWM_RATE
 	));
 	pw_stream_connect(stream,
 		PW_DIRECTION_INPUT,
@@ -158,12 +132,19 @@ pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
 		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
 		params, 1);
 
+	if(pwm_data->inputCount == 0) {
+		pwm_data->inputs = malloc(sizeof(pwm_Input *));
+	}else {
+		pwm_data->inputs = realloc(pwm_data->inputs, (pwm_data->inputCount + 1) * sizeof(pwm_Input *));
+	}
+
+	pwm_data->inputs[pwm_data->inputCount++] = input;
+
 	return input;
 }
 
 pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource) {
 	printf("OUTCREATE: %s\n", name);
-	//pw_loop_signal_event(pw_main_loop_get_loop(data->mainLoop), NULL);
 
 	struct pw_properties *streamProps;
 	if(isSource){
@@ -207,7 +188,25 @@ pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource) {
 		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
 		params, 1);
 
+	if(pwm_data->outputCount == 0) {
+		pwm_data->outputs = malloc(sizeof(pwm_Output *));
+	}else {
+		pwm_data->outputs = realloc(pwm_data->outputs, (pwm_data->outputCount + 1) * sizeof(pwm_Output *));
+	}
+
+	pwm_data->outputs[pwm_data->outputCount++] = output;
+
 	return output;
+}
+
+void pwm_ioDestroyOutput(pwm_Output *output) {
+	for(uint32_t i = 0; i < output->connectionCount; i++) {
+		pwm_Connection *con = output->connections[i];
+		pwm_ioDisconnect(con->input, con->output);
+	}
+
+	spa_hook_remove(&output->hook);
+	pw_stream_destroy(output->stream);
 }
 
 static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Connection *con) {
@@ -228,7 +227,6 @@ void pwm_ioConnect(pwm_Input *in, pwm_Output *out) {
 	con->input = in;
 	con->output = out;
 	con->buffer = malloc(PWM_BUFFER_SIZE);
-	con->bufferAvailable = true;
 	con->bufferSize = 0;
 
 	pwm_ioAddConnection(&in->connections, &in->connectionCount, con);
