@@ -3,6 +3,7 @@
 #include <pthread.h>
 
 #include "pwmixer.h"
+#include "types.h"
 
 static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_stream_state state, const char *error) {
 	printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);

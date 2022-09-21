@@ -1,6 +1,7 @@
 #include <stdio.h>
 
 #include "pwmixer.h"
+#include "types.h"
 
 pwm_Data *pwm_data;
 
