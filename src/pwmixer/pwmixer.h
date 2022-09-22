@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-#include <pipewire/pipewire.h>
 #include <stdint.h>
+#include <stdbool.h>
 
 #define PWM_CHANNELS 2
 #define PWM_RATE 44100
