@@ -3,7 +3,7 @@
 #include <pthread.h>
 
 #include "pwmixer.h"
-#include "types.h"
+#include "internal.h"
 
 static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_stream_state state, const char *error) {
 	printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);
@@ -21,7 +21,7 @@ static const struct pw_stream_events outputStreamEvents = {
 };
 
 void pwm_ioProcessInput(void *data) {
-	pwm_Input *input = data;
+	pwm_IO *input = data;
 
 	struct pw_buffer *buf = pw_stream_dequeue_buffer(input->stream);
 	if(!buf) {
@@ -41,7 +41,7 @@ void pwm_ioProcessInput(void *data) {
 }
 
 void pwm_ioProcessOutput(void *data) {
-	pwm_Output *output = data;
+	pwm_IO *output = data;
 
 	struct pw_buffer *buf = pw_stream_dequeue_buffer(output->stream);
 	if(!buf) return;
@@ -85,17 +85,22 @@ void pwm_ioProcessOutput(void *data) {
 	pw_stream_queue_buffer(output->stream, buf);
 }
 
-pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
+void pwm_ioFree(pwm_IO *object) {
+	free(object->name);
+	free(object);
+}
+
+void pwm_ioCreateInput0(pwm_IO *input) {
 	struct pw_properties *streamProps;
-	if(isSink) {
+	if(input->isSourceOrSink) {
 		streamProps = pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Capture",
 			PW_KEY_MEDIA_ROLE, "Music",
 			PW_KEY_MEDIA_CLASS, "Audio/Sink",
-			PW_KEY_NODE_NAME, name,
-			PW_KEY_NODE_NICK, name,
-			PW_KEY_NODE_DESCRIPTION, name,
+			PW_KEY_NODE_NAME, input->name,
+			PW_KEY_NODE_NICK, input->name,
+			PW_KEY_NODE_DESCRIPTION, input->name,
 			NULL);
 	}else {
 		streamProps = pw_properties_new(
@@ -105,14 +110,11 @@ pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
 			NULL);
 	}
 
-
-	pwm_Input *input = malloc(sizeof(pwm_Input));
 	input->connections = NULL;
 	input->connectionCount = 0;
 
-	struct pw_stream *stream = pw_stream_new(pwm_data->core, name, streamProps);
+	struct pw_stream *stream = pw_stream_new(pwm_data->core, input->name, streamProps);
 	pw_stream_add_listener(stream, &input->hook, &inputStreamEvents, input);
-	printf("STREAM: %p\n", stream);
 	input->stream = stream;
 
 	uint8_t buf[1024];
@@ -128,31 +130,19 @@ pwm_Input *pwm_ioCreateInput(const char *name, bool isSink) {
 		PW_ID_ANY,
 		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
 		params, 1);
-
-	if(pwm_data->inputCount == 0) {
-		pwm_data->inputs = malloc(sizeof(pwm_Input *));
-	}else {
-		pwm_data->inputs = realloc(pwm_data->inputs, (pwm_data->inputCount + 1) * sizeof(pwm_Input *));
-	}
-
-	pwm_data->inputs[pwm_data->inputCount++] = input;
-
-	return input;
 }
 
-pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource) {
-	printf("OUTCREATE: %s\n", name);
-
+void pwm_ioCreateOutput0(pwm_IO *output) {
 	struct pw_properties *streamProps;
-	if(isSource){
+	if(output->isSourceOrSink){
 		streamProps = pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Capture",
 			PW_KEY_MEDIA_ROLE, "Music",
 			PW_KEY_MEDIA_CLASS, "Audio/Source",
-			PW_KEY_NODE_NAME, name,
-			PW_KEY_NODE_NICK, name,
-			PW_KEY_NODE_DESCRIPTION, name,
+			PW_KEY_NODE_NAME, output->name,
+			PW_KEY_NODE_NICK, output->name,
+			PW_KEY_NODE_DESCRIPTION, output->name,
 			NULL);
 	}else {
 		streamProps = pw_properties_new(
@@ -162,13 +152,11 @@ pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource) {
 			NULL);
 	}
 
-	pwm_Output *output = malloc(sizeof(pwm_Output));
 	output->connections = NULL;
 	output->connectionCount = 0;
 
-	struct pw_stream *stream = pw_stream_new(pwm_data->core, name, streamProps);
+	struct pw_stream *stream = pw_stream_new(pwm_data->core, output->name, streamProps);
 	pw_stream_add_listener(stream, &output->hook, &outputStreamEvents, output);
-	printf("OUTSTREAM: %p\n", stream);
 	output->stream = stream;
 
 	uint8_t buf[1024];
@@ -184,26 +172,17 @@ pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource) {
 		PW_ID_ANY,
 		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
 		params, 1);
-
-	if(pwm_data->outputCount == 0) {
-		pwm_data->outputs = malloc(sizeof(pwm_Output *));
-	}else {
-		pwm_data->outputs = realloc(pwm_data->outputs, (pwm_data->outputCount + 1) * sizeof(pwm_Output *));
-	}
-
-	pwm_data->outputs[pwm_data->outputCount++] = output;
-
-	return output;
 }
 
-void pwm_ioDestroyOutput(pwm_Output *output) {
-	for(uint32_t i = 0; i < output->connectionCount; i++) {
-		pwm_Connection *con = output->connections[i];
+void pwm_ioDestroy0(pwm_IO *object) {
+	for(uint32_t i = 0; i < object->connectionCount; i++) {
+		pwm_Connection *con = object->connections[i];
 		pwm_ioDisconnect(con->input, con->output);
 	}
 
-	spa_hook_remove(&output->hook);
-	pw_stream_destroy(output->stream);
+	spa_hook_remove(&object->hook);
+	pw_stream_destroy(object->stream);
+	pwm_ioFree(object);
 }
 
 static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Connection *con) {
@@ -217,7 +196,7 @@ static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Conn
 	*count += 1;
 }
 
-void pwm_ioConnect(pwm_Input *in, pwm_Output *out) {
+void pwm_ioConnect0(pwm_IO *in, pwm_IO *out) {
 	printf("CONNECT %p and %p\n", in, out);
 
 	pwm_Connection *con = malloc(sizeof(pwm_Connection));
@@ -230,6 +209,99 @@ void pwm_ioConnect(pwm_Input *in, pwm_Output *out) {
 	pwm_ioAddConnection(&out->connections, &out->connectionCount, con);
 }
 
-void pwm_ioDisconnect(pwm_Input *in, pwm_Output *out) {
+void pwm_ioDisconnect0(pwm_IO *in, pwm_IO *out) {
 	// TODO: implement
+}
+
+void pwm_ioConnect(pwm_IO *input, pwm_IO *output) {
+	pwm_EventConnect *connect = malloc(sizeof(pwm_EventConnect));
+	connect->in = input;
+	connect->out = output;
+
+	pwm_Event *event = malloc(sizeof(pwm_Event));
+	event->type = PWM_EVENT_CONNECT;
+	event->data = connect;
+
+	pwm_sysEnqueueEvent(event);
+}
+
+void pwm_ioDisconnect(pwm_IO *input, pwm_IO *output) {
+	pwm_EventConnect *connect = malloc(sizeof(pwm_EventConnect));
+	connect->in = input;
+	connect->out = output;
+
+	pwm_Event *event = malloc(sizeof(pwm_Event));
+	event->type = PWM_EVENT_DISCONNECT;
+	event->data = connect;
+
+	pwm_sysEnqueueEvent(event);
+}
+
+pwm_IO *pwm_ioCreateInput(const char *name, bool isSink) {
+	pwm_EventCreate *create = malloc(sizeof(pwm_EventCreate));
+
+	size_t nameLen = strlen(name);
+	char *nameChars = malloc(nameLen + 1);
+	memcpy(nameChars, name, nameLen);
+	nameChars[nameLen] = 0;
+
+	pwm_IO *object = calloc(1, sizeof(pwm_IO));
+	object->name = nameChars;
+	object->isSourceOrSink = isSink;
+	create->object = object;
+
+	pwm_data->objects = realloc(pwm_data->objects, (pwm_data->objectCount + 1) * sizeof(pwm_IO *));
+	pwm_data->objects[pwm_data->objectCount++] = object;
+
+	pwm_Event *event = malloc(sizeof(pwm_Event));
+	event->type = PWM_EVENT_CREATE_INPUT;
+	event->data = create;
+
+	pwm_sysEnqueueEvent(event);
+
+	return object;
+}
+
+pwm_IO *pwm_ioCreateOutput(const char *name, bool isSource) {
+	pwm_EventCreate *create = malloc(sizeof(pwm_EventCreate));
+
+	size_t nameLen = strlen(name);
+	char *nameChars = malloc(nameLen + 1);
+	memcpy(nameChars, name, nameLen);
+	nameChars[nameLen] = 0;
+
+	pwm_IO *object = calloc(1, sizeof(pwm_IO));
+	object->name = nameChars;
+	object->isSourceOrSink = isSource;
+	create->object = object;
+
+	pwm_data->objects = realloc(pwm_data->objects, (pwm_data->objectCount + 1) * sizeof(pwm_IO *));
+	pwm_data->objects[pwm_data->objectCount++] = object;
+
+	pwm_Event *event = malloc(sizeof(pwm_Event));
+	event->type = PWM_EVENT_CREATE_OUTPUT;
+	event->data = create;
+
+	pwm_sysEnqueueEvent(event);
+
+	return object;
+}
+
+uint32_t pwm_ioGetID(pwm_IO *object) {
+	return object->id;
+}
+
+pwm_IO *pwm_ioGetByID(uint32_t id){
+	return pwm_data->objects[id];
+}
+
+void pwm_ioDestroy(pwm_IO *input) {
+	pwm_EventDestroy *destroy = malloc(sizeof(pwm_EventDestroy));
+	destroy->object = input;
+
+	pwm_Event *event = malloc(sizeof(pwm_Event));
+	event->type = PWM_EVENT_DESTROY;
+	event->data = destroy;
+
+	pwm_sysEnqueueEvent(event);
 }

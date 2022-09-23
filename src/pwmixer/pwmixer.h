@@ -12,28 +12,29 @@ extern "C" {
 #define PWM_RATE 44100
 
 #define PWM_BUFFER_SIZE 8192
+#define PWM_INVALID_ID 0xFFFFFFFF
 
-typedef struct pwm_Input pwm_Input;
-typedef struct pwm_Output pwm_Output;
+typedef struct pwm_IO pwm_IO;
 typedef struct pwm_Connection pwm_Connection;
 typedef struct pwm_Data pwm_Data;
 
-extern pwm_Data *pwm_data;
+typedef enum pwm_EventType pwm_EventType;
+typedef struct pwm_Event pwm_Event;
+typedef struct pwm_EventCreate pwm_EventCreate;
+typedef struct pwm_EventDestroy pwm_EventDestroy;
+typedef struct pwm_EventConnect pwm_EventConnect;
 
 void pwm_sysConnect(int argc, char **argv);
-void pwm_sysRun();
 void pwm_sysDisconnect();
 
-void pwm_ioConnect(pwm_Input *input, pwm_Output *output);
-void pwm_ioDisconnect(pwm_Input *input, pwm_Output *output);
+void pwm_ioConnect(pwm_IO *input, pwm_IO *output);
+void pwm_ioDisconnect(pwm_IO *input, pwm_IO *output);
 
-pwm_Input *pwm_ioCreateInput(const char *name, bool isSink);
-void pwm_ioDestroyInput(pwm_Input *input);
-void pwm_ioProcessInput(void *data);
-
-pwm_Output *pwm_ioCreateOutput(const char *name, bool isSource);
-void pwm_ioDestroyOutput(pwm_Output *output);
-void pwm_ioProcessOutput(void *data);
+pwm_IO *pwm_ioCreateInput(const char *name, bool isSink);
+pwm_IO *pwm_ioCreateOutput(const char *name, bool isSource);
+uint32_t pwm_ioGetID(pwm_IO *object);
+pwm_IO *pwm_ioGetByID(uint32_t id);
+void pwm_ioDestroy(pwm_IO *input);
 
 #ifdef __cplusplus
 }

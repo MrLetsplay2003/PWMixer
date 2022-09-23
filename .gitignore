@@ -1,4 +1,5 @@
 testing/
 bin/
 lib/
+build/
 .vscode/
