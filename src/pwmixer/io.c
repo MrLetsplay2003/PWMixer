@@ -90,6 +90,10 @@ void pwm_ioFree(pwm_IO *object) {
 	free(object);
 }
 
+void pwm_ioFreeConnection(pwm_Connection *connection) {
+	free(connection);
+}
+
 void pwm_ioCreateInput0(pwm_IO *input) {
 	struct pw_properties *streamProps;
 	if(input->isSourceOrSink) {
@@ -177,7 +181,15 @@ void pwm_ioCreateOutput0(pwm_IO *output) {
 void pwm_ioDestroy0(pwm_IO *object) {
 	for(uint32_t i = 0; i < object->connectionCount; i++) {
 		pwm_Connection *con = object->connections[i];
-		pwm_ioDisconnect(con->input, con->output);
+		pwm_ioDisconnect0(con->input, con->output);
+	}
+
+	for(uint32_t i = 0; i < pwm_data->objectCount; i++) {
+		pwm_IO *o = pwm_data->objects[i];
+		if(o == object) {
+			pwm_data->objects[i] = pwm_data->objects[--pwm_data->objectCount];
+			pwm_data->objects = realloc(pwm_data->objects, pwm_data->objectCount * sizeof(pwm_IO *));
+		}
 	}
 
 	spa_hook_remove(&object->hook);
@@ -197,7 +209,7 @@ static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Conn
 }
 
 void pwm_ioConnect0(pwm_IO *in, pwm_IO *out) {
-	printf("CONNECT %p and %p\n", in, out);
+	printf("Connecting %p (%s) and %p (%s)\n", in, in->name, out, out->name);
 
 	pwm_Connection *con = malloc(sizeof(pwm_Connection));
 	con->input = in;
@@ -210,7 +222,36 @@ void pwm_ioConnect0(pwm_IO *in, pwm_IO *out) {
 }
 
 void pwm_ioDisconnect0(pwm_IO *in, pwm_IO *out) {
-	// TODO: implement
+	pwm_Connection *connection;
+	for(uint32_t i = 0; i < in->connectionCount; i++) {
+		pwm_Connection *con = in->connections[i];
+		if(con->input == in && con->output == out) {
+			connection = con;
+			break;
+		}
+	}
+
+	if(connection == NULL) return;
+
+	for(uint32_t i = 0; i < in->connectionCount; i++) {
+		pwm_Connection *con = in->connections[i];
+		if(con == connection) {
+			in->connections[i] = in->connections[--in->connectionCount];
+			in->connections = realloc(in->connections, in->connectionCount * sizeof(pwm_Connection *));
+			break;
+		}
+	}
+
+	for(uint32_t i = 0; i < out->connectionCount; i++) {
+		pwm_Connection *con = out->connections[i];
+		if(con == connection) {
+			out->connections[i] = out->connections[--out->connectionCount];
+			out->connections = realloc(out->connections, out->connectionCount * sizeof(pwm_Connection *));
+			break;
+		}
+	}
+
+	free(connection);
 }
 
 void pwm_ioConnect(pwm_IO *input, pwm_IO *output) {
@@ -295,9 +336,9 @@ pwm_IO *pwm_ioGetByID(uint32_t id){
 	return pwm_data->objects[id];
 }
 
-void pwm_ioDestroy(pwm_IO *input) {
+void pwm_ioDestroy(pwm_IO *object) {
 	pwm_EventDestroy *destroy = malloc(sizeof(pwm_EventDestroy));
-	destroy->object = input;
+	destroy->object = object;
 
 	pwm_Event *event = malloc(sizeof(pwm_Event));
 	event->type = PWM_EVENT_DESTROY;

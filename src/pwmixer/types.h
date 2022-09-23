@@ -49,6 +49,7 @@ struct pwm_Data {
 	uint32_t eventCount;
 
 	struct spa_source *eventSource;
+	struct spa_source *quitEventSource;
 };
 
 enum pwm_EventType {

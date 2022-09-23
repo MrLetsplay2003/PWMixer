@@ -1,5 +1,12 @@
+DEBUG=0
 CC=gcc
+
+ifeq ($(DEBUG), 1)
 CFLAGS=-Wall -g
+else
+CFLAGS=-Wall -O3
+endif
+
 INCLUDES=-I/usr/include/pipewire-0.3/ -I/usr/include/spa-0.2/
 LIBS=-lpipewire-0.3 -lpthread
 
@@ -9,6 +16,10 @@ BINFOLDER=bin
 
 .PHONY: all
 all: $(LIBFOLDER)/libpwmixer.a $(LIBFOLDER)/libpwmixer.so $(BINFOLDER)/pwmixer_test
+
+.PHONY: debug
+debug:
+	$(MAKE) DEBUG=1
 
 $(LIBFOLDER)/libpwmixer.a: $(BUILDFOLDER)/pwmixer.o $(BUILDFOLDER)/io.o
 	mkdir -p $(LIBFOLDER)

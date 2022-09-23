@@ -17,6 +17,7 @@ void pwm_sysConnect(int argc, char **argv) {
 	pw_loop_add_signal(pw_main_loop_get_loop(pwm_data->mainLoop), SIGINT, pwm_sysDisconnect, NULL);
 	pw_loop_add_signal(pw_main_loop_get_loop(pwm_data->mainLoop), SIGTERM, pwm_sysDisconnect, NULL);
 	pwm_data->eventSource = pw_loop_add_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_sysHandleEvent, NULL);
+	pwm_data->quitEventSource = pw_loop_add_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_sysHandleExit, NULL);
 
 	pthread_mutex_init(&pwm_data->mutex, NULL);
 	pwm_sysRun();
@@ -31,8 +32,16 @@ void pwm_sysRun() {
 }
 
 void pwm_sysDisconnect() {
-	printf("PWMixer exiting\n");
-	pw_main_loop_quit(pwm_data->mainLoop);
+	if(!pwm_data) return;
+	pw_loop_signal_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_data->quitEventSource);
+	pthread_join(pwm_data->thread, NULL);
+
+	free(pwm_data);
+	pwm_data = NULL;
+}
+
+bool pwm_sysIsRunning() {
+	return pwm_data != NULL;
 }
 
 void pwm_sysHandleEvent(void *data, uint64_t count) {
@@ -88,6 +97,10 @@ void pwm_sysHandleEvent(void *data, uint64_t count) {
 	pthread_mutex_unlock(&pwm_data->mutex);
 }
 
+void pwm_sysHandleExit(void *data, uint64_t count) {
+	pw_main_loop_quit(pwm_data->mainLoop);
+}
+
 void pwm_sysCleanup() {
 	printf("PWMixer cleaning up\n");
 
@@ -104,15 +117,12 @@ void pwm_sysCleanup() {
 	pw_main_loop_destroy(pwm_data->mainLoop);
 	pw_deinit();
 	pthread_mutex_destroy(&pwm_data->mutex);
-
-	free(pwm_data);
-	pwm_data = NULL;
 }
 
 void *pwm_sysRunThread(void *data) {
-	printf("Running\n");
+	printf("PWMixer is running\n");
 	pw_main_loop_run(pwm_data->mainLoop);
-	printf("Exiting\n");
+	printf("PWMixer is exiting\n");
 	pwm_sysCleanup();
 	return NULL;
 }
