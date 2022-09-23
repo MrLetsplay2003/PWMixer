@@ -5,8 +5,8 @@
 
 pwm_Data *pwm_data;
 
-void pwm_sysConnect(int argc, char **argv) {
-	pw_init(&argc, &argv);
+void pwm_sysConnect(int *argc, char ***argv) {
+	pw_init(argc, argv);
 
 	pwm_data = calloc(1, sizeof(pwm_Data));
 	pwm_data->mainLoop = pw_main_loop_new(NULL);

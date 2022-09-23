@@ -24,7 +24,7 @@ typedef struct pwm_EventCreate pwm_EventCreate;
 typedef struct pwm_EventDestroy pwm_EventDestroy;
 typedef struct pwm_EventConnect pwm_EventConnect;
 
-void pwm_sysConnect(int argc, char **argv);
+void pwm_sysConnect(int *argc, char ***argv);
 bool pwm_sysIsRunning();
 void pwm_sysDisconnect();
 

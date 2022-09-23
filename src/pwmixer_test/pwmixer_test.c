@@ -19,7 +19,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
-	pwm_sysConnect(argc, argv);
+	pwm_sysConnect(&argc, &argv);
 
 	pwm_IO *in = pwm_ioCreateInput("To Out + Out2", false);
 	pwm_IO *in2 = pwm_ioCreateInput("To Out2 only", true);
