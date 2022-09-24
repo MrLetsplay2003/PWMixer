@@ -2,19 +2,23 @@
 
 #include <stdio.h>
 #include <signal.h>
+#include <unistd.h>
+#include <pthread.h>
 
 static void handleInterrupt(int sig) {
-	printf("Got interrupt\n");
-	if(pwm_sysIsRunning()) pwm_sysDisconnect();
+	pwm_sysDisconnect();
 }
 
 int main(int argc, char *argv[]) {
-	if(signal(SIGINT, handleInterrupt) == SIG_ERR) {
+	struct sigaction action;
+	action.sa_handler = handleInterrupt;
+
+	if(sigaction(SIGINT, &action, NULL)) {
 		printf("Failed to add SIGINT handler\n");
 		return 1;
 	}
 
-	if(signal(SIGTERM, handleInterrupt) == SIG_ERR) {
+	if(sigaction(SIGTERM, &action, NULL)) {
 		printf("Failed to add SIGTERM handler\n");
 		return 1;
 	}
@@ -29,17 +33,8 @@ int main(int argc, char *argv[]) {
 	pwm_ioConnect(in, out2);
 	pwm_ioConnect(in2, out2);
 
-	pwm_ioDestroy(in);
-	pwm_ioDestroy(in2);
-	pwm_ioDestroy(out);
-	pwm_ioDestroy(out2);
-
-	//while(pwm_sysIsRunning());
+	while(pwm_sysIsRunning()) usleep(1000 * 1000);
 	pwm_sysDisconnect();
-
-	//printf("Run #2\n");
-	//pwm_sysConnect(argc, argv);
-	//while(pwm_sysIsRunning());
 
 	return 0;
 }

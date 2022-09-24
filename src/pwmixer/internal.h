@@ -7,7 +7,7 @@
 extern pwm_Data *pwm_data;
 
 void pwm_sysHandleEvent(void *data, uint64_t count);
-void pwm_sysHandleExit(void *data, uint64_t count);
+void pwm_sysHandleExit();
 void pwm_sysRun();
 void pwm_sysCleanup();
 

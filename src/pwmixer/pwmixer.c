@@ -14,8 +14,6 @@ void pwm_sysConnect(int *argc, char ***argv) {
 	pwm_data->core = pw_context_connect(pwm_data->context, NULL, 0);
 
 	printf("Connected to PipeWire\n");
-	pw_loop_add_signal(pw_main_loop_get_loop(pwm_data->mainLoop), SIGINT, pwm_sysDisconnect, NULL);
-	pw_loop_add_signal(pw_main_loop_get_loop(pwm_data->mainLoop), SIGTERM, pwm_sysDisconnect, NULL);
 	pwm_data->eventSource = pw_loop_add_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_sysHandleEvent, NULL);
 	pwm_data->quitEventSource = pw_loop_add_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_sysHandleExit, NULL);
 
@@ -34,10 +32,12 @@ void pwm_sysRun() {
 void pwm_sysDisconnect() {
 	if(!pwm_data) return;
 	pw_loop_signal_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_data->quitEventSource);
-	pthread_join(pwm_data->thread, NULL);
 
-	free(pwm_data);
-	pwm_data = NULL;
+	int err;
+	if((err = pthread_join(pwm_data->thread, NULL))) {
+		printf("Failed to join: %i\n", err);
+		return;
+	}
 }
 
 bool pwm_sysIsRunning() {
@@ -97,7 +97,7 @@ void pwm_sysHandleEvent(void *data, uint64_t count) {
 	pthread_mutex_unlock(&pwm_data->mutex);
 }
 
-void pwm_sysHandleExit(void *data, uint64_t count) {
+void pwm_sysHandleExit() {
 	pw_main_loop_quit(pwm_data->mainLoop);
 }
 
@@ -105,7 +105,8 @@ void pwm_sysCleanup() {
 	printf("PWMixer cleaning up\n");
 
 	for(uint32_t i = 0; i < pwm_data->objectCount; i++) {
-		pwm_ioFree(pwm_data->objects[i]);
+		pwm_IO *object = pwm_data->objects[i];
+		if(object) pwm_ioFree(object);
 	}
 
 	for(uint32_t i = 0; i < pwm_data->eventCount; i++) {
@@ -117,13 +118,21 @@ void pwm_sysCleanup() {
 	pw_main_loop_destroy(pwm_data->mainLoop);
 	pw_deinit();
 	pthread_mutex_destroy(&pwm_data->mutex);
+
+	free(pwm_data);
+	pwm_data = NULL;
 }
 
 void *pwm_sysRunThread(void *data) {
+	sigset_t sigmask;
+	sigemptyset(&sigmask);
+	pthread_sigmask(SIG_SETMASK, &sigmask, NULL);
+
 	printf("PWMixer is running\n");
 	pw_main_loop_run(pwm_data->mainLoop);
 	printf("PWMixer is exiting\n");
 	pwm_sysCleanup();
+	printf("PWMixer exit\n");
 	return NULL;
 }
 

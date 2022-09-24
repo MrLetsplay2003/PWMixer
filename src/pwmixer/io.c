@@ -184,13 +184,10 @@ void pwm_ioDestroy0(pwm_IO *object) {
 		pwm_ioDisconnect0(con->input, con->output);
 	}
 
-	for(uint32_t i = 0; i < pwm_data->objectCount; i++) {
-		pwm_IO *o = pwm_data->objects[i];
-		if(o == object) {
-			pwm_data->objects[i] = pwm_data->objects[--pwm_data->objectCount];
-			pwm_data->objects[i]->id = i;
-			pwm_data->objects = realloc(pwm_data->objects, pwm_data->objectCount * sizeof(pwm_IO *));
-		}
+	if(object->id == pwm_data->objectCount - 1) { // Object is the last object
+		pwm_data->objects = realloc(pwm_data->objects, (--pwm_data->objectCount) * sizeof(pwm_IO *));
+	}else { // Object is somewhere else, set it to NULL
+		pwm_data->objects[object->id] = NULL;
 	}
 
 	spa_hook_remove(&object->hook);
@@ -223,7 +220,7 @@ void pwm_ioConnect0(pwm_IO *in, pwm_IO *out) {
 }
 
 void pwm_ioDisconnect0(pwm_IO *in, pwm_IO *out) {
-	pwm_Connection *connection;
+	pwm_Connection *connection = NULL;
 	for(uint32_t i = 0; i < in->connectionCount; i++) {
 		pwm_Connection *con = in->connections[i];
 		if(con->input == in && con->output == out) {
@@ -232,7 +229,7 @@ void pwm_ioDisconnect0(pwm_IO *in, pwm_IO *out) {
 		}
 	}
 
-	if(connection == NULL) return;
+	if(!connection) return;
 
 	for(uint32_t i = 0; i < in->connectionCount; i++) {
 		pwm_Connection *con = in->connections[i];
@@ -279,6 +276,25 @@ void pwm_ioDisconnect(pwm_IO *input, pwm_IO *output) {
 	pwm_sysEnqueueEvent(event);
 }
 
+static void pwm_ioInsertObject(pwm_IO *object) {
+	// Try to find a free spot
+	uint32_t newID = PWM_INVALID_ID;
+	for(uint32_t i = 0; i < pwm_data->objectCount; i++) {
+		if(!pwm_data->objects[i]) { // Free spot found
+			newID = i;
+			break;
+		}
+	}
+
+	if(newID == PWM_INVALID_ID) { // Need to assign new id
+		newID = pwm_data->objectCount++;
+		pwm_data->objects = realloc(pwm_data->objects, pwm_data->objectCount * sizeof(pwm_IO *));
+	}
+
+	pwm_data->objects[newID] = object;
+	object->id = newID;
+}
+
 pwm_IO *pwm_ioCreateInput(const char *name, bool isSink) {
 	pwm_EventCreate *create = malloc(sizeof(pwm_EventCreate));
 
@@ -292,8 +308,7 @@ pwm_IO *pwm_ioCreateInput(const char *name, bool isSink) {
 	object->isSourceOrSink = isSink;
 	create->object = object;
 
-	pwm_data->objects = realloc(pwm_data->objects, (pwm_data->objectCount + 1) * sizeof(pwm_IO *));
-	pwm_data->objects[pwm_data->objectCount++] = object;
+	pwm_ioInsertObject(object);
 
 	pwm_Event *event = malloc(sizeof(pwm_Event));
 	event->type = PWM_EVENT_CREATE_INPUT;
@@ -317,8 +332,7 @@ pwm_IO *pwm_ioCreateOutput(const char *name, bool isSource) {
 	object->isSourceOrSink = isSource;
 	create->object = object;
 
-	pwm_data->objects = realloc(pwm_data->objects, (pwm_data->objectCount + 1) * sizeof(pwm_IO *));
-	pwm_data->objects[pwm_data->objectCount++] = object;
+	pwm_ioInsertObject(object);
 
 	pwm_Event *event = malloc(sizeof(pwm_Event));
 	event->type = PWM_EVENT_CREATE_OUTPUT;
