@@ -188,6 +188,7 @@ void pwm_ioDestroy0(pwm_IO *object) {
 		pwm_IO *o = pwm_data->objects[i];
 		if(o == object) {
 			pwm_data->objects[i] = pwm_data->objects[--pwm_data->objectCount];
+			pwm_data->objects[i]->id = i;
 			pwm_data->objects = realloc(pwm_data->objects, pwm_data->objectCount * sizeof(pwm_IO *));
 		}
 	}
