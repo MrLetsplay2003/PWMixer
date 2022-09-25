@@ -116,6 +116,14 @@ void pwm_sysHandleEvent(void *data, uint64_t count) {
 				pwm_ioDestroy0(destroy->object);
 				break;
 			}
+			case PWM_EVENT_SET_CONNECTION_VOLUME:
+			{
+				pwm_EventSetConnectionVolume *setVolume = event->data;
+				pwm_Connection *con = pwm_ioGetConnection(setVolume->in, setVolume->out);
+				if(!con) break;
+				con->volume = setVolume->volume;
+				break;
+			}
 			default:
 			{
 				fprintf(stderr, "Got invalid event type %i, ignoring\n", event->type);

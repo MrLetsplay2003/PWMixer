@@ -29,6 +29,7 @@ typedef struct pwm_Event pwm_Event;
 typedef struct pwm_EventCreate pwm_EventCreate;
 typedef struct pwm_EventDestroy pwm_EventDestroy;
 typedef struct pwm_EventConnect pwm_EventConnect;
+typedef struct pwm_EventSetConnectionVolume pwm_EventSetConnectionVolume;
 
 int pwm_sysConnect(int *argc, char ***argv);
 bool pwm_sysIsRunning();
@@ -42,6 +43,9 @@ pwm_IO *pwm_ioCreateOutput(const char *name, bool isSource);
 uint32_t pwm_ioGetID(pwm_IO *object);
 pwm_IO *pwm_ioGetByID(uint32_t id);
 void pwm_ioDestroy(pwm_IO *input);
+
+void pwm_ioSetVolume(pwm_IO *object, float volume);
+void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume);
 
 void pwm_debugEnableLog(bool log);
 bool pwm_debugIsLogEnabled();

@@ -74,7 +74,7 @@ void pwm_ioProcessOutput(void *data) {
 		pwm_Connection *con = output->connections[i];
 
 		for(size_t i = 0; i < n_frames * PWM_CHANNELS; i++) {
-			*(((float *) streamDat) + i) += *(((float *) con->buffer) + i);
+			*(((float *) streamDat) + i) += *(((float *) con->buffer) + i) * con->input->volume * con->volume * output->volume;
 		}
 
 		con->bufferSize -= nRead;
@@ -187,12 +187,6 @@ void pwm_ioDestroy0(pwm_IO *object) {
 		pwm_ioDisconnect0(con->input, con->output);
 	}
 
-	if(object->id == pwm_data->objectCount - 1) { // Object is the last object
-		pwm_data->objects = realloc(pwm_data->objects, (--pwm_data->objectCount) * sizeof(pwm_IO *));
-	}else { // Object is somewhere else, set it to NULL
-		pwm_data->objects[object->id] = NULL;
-	}
-
 	spa_hook_remove(&object->hook);
 	pw_stream_destroy(object->stream);
 	pwm_ioFree(object);
@@ -209,29 +203,34 @@ static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Conn
 	*count += 1;
 }
 
+pwm_Connection *pwm_ioGetConnection(pwm_IO *input, pwm_IO *output) {
+	pwm_Connection *connection = NULL;
+	for(uint32_t i = 0; i < input->connectionCount; i++) {
+		pwm_Connection *con = input->connections[i];
+		if(con->input == input && con->output == output) {
+			connection = con;
+			break;
+		}
+	}
+	return connection;
+}
+
 void pwm_ioConnect0(pwm_IO *in, pwm_IO *out) {
 	if(pwm_debugIsLogEnabled()) printf("Connecting %p (%s) and %p (%s)\n", in, in->name, out, out->name);
 
-	pwm_Connection *con = malloc(sizeof(pwm_Connection));
+	pwm_Connection *con = calloc(1, sizeof(pwm_Connection));
 	con->input = in;
 	con->output = out;
 	con->buffer = malloc(PWM_BUFFER_SIZE);
 	con->bufferSize = 0;
+	con->volume = 1.0f;
 
 	pwm_ioAddConnection(&in->connections, &in->connectionCount, con);
 	pwm_ioAddConnection(&out->connections, &out->connectionCount, con);
 }
 
 void pwm_ioDisconnect0(pwm_IO *in, pwm_IO *out) {
-	pwm_Connection *connection = NULL;
-	for(uint32_t i = 0; i < in->connectionCount; i++) {
-		pwm_Connection *con = in->connections[i];
-		if(con->input == in && con->output == out) {
-			connection = con;
-			break;
-		}
-	}
-
+	pwm_Connection *connection = pwm_ioGetConnection(in, out);
 	if(!connection) return;
 
 	for(uint32_t i = 0; i < in->connectionCount; i++) {
@@ -309,6 +308,7 @@ pwm_IO *pwm_ioCreateInput(const char *name, bool isSink) {
 	pwm_IO *object = calloc(1, sizeof(pwm_IO));
 	object->name = nameChars;
 	object->isSourceOrSink = isSink;
+	object->volume = 1.0f;
 	create->object = object;
 
 	pwm_ioInsertObject(object);
@@ -333,6 +333,7 @@ pwm_IO *pwm_ioCreateOutput(const char *name, bool isSource) {
 	pwm_IO *object = calloc(1, sizeof(pwm_IO));
 	object->name = nameChars;
 	object->isSourceOrSink = isSource;
+	object->volume = 1.0f;
 	create->object = object;
 
 	pwm_ioInsertObject(object);
@@ -356,12 +357,35 @@ pwm_IO *pwm_ioGetByID(uint32_t id){
 }
 
 void pwm_ioDestroy(pwm_IO *object) {
+	if(object->id == pwm_data->objectCount - 1) { // Object is the last object
+		pwm_data->objects = realloc(pwm_data->objects, (--pwm_data->objectCount) * sizeof(pwm_IO *));
+	}else { // Object is somewhere else, set it to NULL
+		pwm_data->objects[object->id] = NULL;
+	}
+
 	pwm_EventDestroy *destroy = malloc(sizeof(pwm_EventDestroy));
 	destroy->object = object;
 
 	pwm_Event *event = malloc(sizeof(pwm_Event));
 	event->type = PWM_EVENT_DESTROY;
 	event->data = destroy;
+
+	pwm_sysEnqueueEvent(event);
+}
+
+void pwm_ioSetVolume(pwm_IO *object, float volume) {
+	object->volume = volume;
+}
+
+void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume) {
+	pwm_EventSetConnectionVolume *setVolume = malloc(sizeof(pwm_EventSetConnectionVolume));
+	setVolume->in = input;
+	setVolume->out = output;
+	setVolume->volume = volume;
+
+	pwm_Event *event = malloc(sizeof(pwm_Event));
+	event->type = PWM_EVENT_SET_CONNECTION_VOLUME;
+	event->data = setVolume;
 
 	pwm_sysEnqueueEvent(event);
 }

@@ -16,6 +16,8 @@ struct pwm_Connection {
 
 	uint8_t *buffer;
 	size_t bufferSize;
+
+	float volume;
 };
 
 struct pwm_IO {
@@ -29,6 +31,8 @@ struct pwm_IO {
 
 	pwm_Connection **connections;
 	uint32_t connectionCount;
+
+	float volume;
 };
 
 struct pwm_Data {
@@ -62,6 +66,7 @@ enum pwm_EventType {
 	PWM_EVENT_DESTROY,
 	PWM_EVENT_CONNECT,
 	PWM_EVENT_DISCONNECT,
+	PWM_EVENT_SET_CONNECTION_VOLUME,
 };
 
 struct pwm_Event {
@@ -80,6 +85,12 @@ struct pwm_EventDestroy {
 struct pwm_EventConnect {
 	pwm_IO *in;
 	pwm_IO *out;
+};
+
+struct pwm_EventSetConnectionVolume {
+	pwm_IO *in;
+	pwm_IO *out;
+	float volume;
 };
 
 #ifdef __cplusplus

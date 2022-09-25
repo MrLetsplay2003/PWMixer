@@ -23,6 +23,7 @@ void pwm_ioProcessInput(void *data);
 void pwm_ioProcessOutput(void *data);
 void pwm_ioFree(pwm_IO *object);
 void pwm_ioFreeConnection(pwm_Connection *connection);
+pwm_Connection *pwm_ioGetConnection(pwm_IO *input, pwm_IO *output);
 
 // Impls of the API functions
 void pwm_ioConnect0(pwm_IO *input, pwm_IO *output);

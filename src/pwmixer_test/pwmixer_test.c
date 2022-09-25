@@ -23,6 +23,7 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 
+	pwm_debugEnableLog(true);
 	pwm_sysConnect(&argc, &argv);
 
 	pwm_IO *in = pwm_ioCreateInput("To Out + Out2", true);
@@ -33,7 +34,13 @@ int main(int argc, char *argv[]) {
 	pwm_ioConnect(in, out2);
 	pwm_ioConnect(in2, out2);
 
-	while(pwm_sysIsRunning()) usleep(1000 * 1000);
+	bool loud = false;
+	while(pwm_sysIsRunning()) {
+		loud = !loud;
+		pwm_ioSetConnectionVolume(in, out, loud ? 1.0f : 0.0f);
+		usleep(1000 * 1000);
+	}
+
 	pwm_sysDisconnect();
 
 	return 0;
