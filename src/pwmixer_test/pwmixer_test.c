@@ -14,12 +14,12 @@ int main(int argc, char *argv[]) {
 	action.sa_handler = handleInterrupt;
 
 	if(sigaction(SIGINT, &action, NULL)) {
-		printf("Failed to add SIGINT handler\n");
+		fprintf(stderr, "Failed to add SIGINT handler\n");
 		return 1;
 	}
 
 	if(sigaction(SIGTERM, &action, NULL)) {
-		printf("Failed to add SIGTERM handler\n");
+		fprintf(stderr, "Failed to add SIGTERM handler\n");
 		return 1;
 	}
 

@@ -1,6 +1,10 @@
 #ifndef _TYPES_H_
 #define _TYPES_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <pipewire/pipewire.h>
 #include <pthread.h>
 
@@ -77,5 +81,9 @@ struct pwm_EventConnect {
 	pwm_IO *in;
 	pwm_IO *out;
 };
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

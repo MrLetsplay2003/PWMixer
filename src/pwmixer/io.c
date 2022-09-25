@@ -6,7 +6,7 @@
 #include "internal.h"
 
 static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_stream_state state, const char *error) {
-	printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);
+	if(pwm_debugIsLogEnabled()) printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);
 }
 
 static const struct pw_stream_events inputStreamEvents = {
@@ -25,7 +25,7 @@ void pwm_ioProcessInput(void *data) {
 
 	struct pw_buffer *buf = pw_stream_dequeue_buffer(input->stream);
 	if(!buf) {
-		printf("NO BUF\n");
+		if(pwm_debugIsLogEnabled()) printf("Got NULL buffer while processing input\n");
 		return;
 	}
 
@@ -44,7 +44,10 @@ void pwm_ioProcessOutput(void *data) {
 	pwm_IO *output = data;
 
 	struct pw_buffer *buf = pw_stream_dequeue_buffer(output->stream);
-	if(!buf) return;
+	if(!buf) {
+		if(pwm_debugIsLogEnabled()) printf("Got NULL buffer while processing output\n");
+		return;
+	}
 
 	if(output->connectionCount == 0 || buf->requested == 0) {
 		pw_stream_queue_buffer(output->stream, buf);
@@ -207,7 +210,7 @@ static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Conn
 }
 
 void pwm_ioConnect0(pwm_IO *in, pwm_IO *out) {
-	printf("Connecting %p (%s) and %p (%s)\n", in, in->name, out, out->name);
+	if(pwm_debugIsLogEnabled()) printf("Connecting %p (%s) and %p (%s)\n", in, in->name, out, out->name);
 
 	pwm_Connection *con = malloc(sizeof(pwm_Connection));
 	con->input = in;
@@ -348,6 +351,7 @@ uint32_t pwm_ioGetID(pwm_IO *object) {
 }
 
 pwm_IO *pwm_ioGetByID(uint32_t id){
+	if(id >= pwm_data->objectCount || id == PWM_INVALID_ID) return NULL;
 	return pwm_data->objects[id];
 }
 

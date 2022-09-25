@@ -4,29 +4,64 @@
 #include "internal.h"
 
 pwm_Data *pwm_data;
+static bool pwm_log = false;
 
-void pwm_sysConnect(int *argc, char ***argv) {
+int pwm_sysConnect(int *argc, char ***argv) {
+	int err = PWM_ERROR_NONE;
+
 	pw_init(argc, argv);
 
 	pwm_data = calloc(1, sizeof(pwm_Data));
-	pwm_data->mainLoop = pw_main_loop_new(NULL);
-	pwm_data->context = pw_context_new(pw_main_loop_get_loop(pwm_data->mainLoop), NULL, 0);
-	pwm_data->core = pw_context_connect(pwm_data->context, NULL, 0);
+	if(!pwm_data) return PWM_ERROR_MEM;
 
-	printf("Connected to PipeWire\n");
+	pwm_data->mainLoop = pw_main_loop_new(NULL);
+	if(!pwm_data->mainLoop) {
+		err = PWM_ERROR_PIPEWIRE;
+		goto cleanup_data;
+	}
+
+	pwm_data->context = pw_context_new(pw_main_loop_get_loop(pwm_data->mainLoop), NULL, 0);
+	if(!pwm_data->context) {
+		err = PWM_ERROR_PIPEWIRE;
+		goto cleanup_mainloop;
+	}
+
+	pwm_data->core = pw_context_connect(pwm_data->context, NULL, 0);
+	if(!pwm_data->context) {
+		err = PWM_ERROR_PIPEWIRE;
+		goto cleanup_context;
+	}
+
+	if(pwm_debugIsLogEnabled()) printf("Connected to PipeWire\n");
 	pwm_data->eventSource = pw_loop_add_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_sysHandleEvent, NULL);
 	pwm_data->quitEventSource = pw_loop_add_event(pw_main_loop_get_loop(pwm_data->mainLoop), pwm_sysHandleExit, NULL);
-
-	pthread_mutex_init(&pwm_data->mutex, NULL);
-	pwm_sysRun();
-}
-
-void pwm_sysRun() {
-	int err;
-	if((err = pthread_create(&pwm_data->thread, NULL, pwm_sysRunThread, NULL))) {
-		pwm_data->thread = 0;
-		printf("Failed to create thread: %i\n", err);
+	if(!pwm_data->eventSource || !pwm_data->quitEventSource) {
+		err = PWM_ERROR_PIPEWIRE;
+		goto cleanup_context;
 	}
+
+	if(pthread_mutex_init(&pwm_data->mutex, NULL)) {
+		err = PWM_ERROR_OTHER;
+		goto cleanup_context;
+	}
+
+	int pthreadErr;
+	if((pthreadErr = pthread_create(&pwm_data->thread, NULL, pwm_sysRunThread, NULL))) {
+		if(pwm_debugIsLogEnabled()) printf("Failed to create thread: %i\n", err);
+		err = PWM_ERROR_OTHER;
+		goto cleanup_context;
+	}
+
+	return PWM_ERROR_NONE;
+
+cleanup_context:
+	pw_context_destroy(pwm_data->context);
+cleanup_mainloop:
+	pw_main_loop_destroy(pwm_data->mainLoop);
+cleanup_data:
+	free(pwm_data);
+	pwm_data = NULL;
+	return err;
 }
 
 void pwm_sysDisconnect() {
@@ -35,7 +70,7 @@ void pwm_sysDisconnect() {
 
 	int err;
 	if((err = pthread_join(pwm_data->thread, NULL))) {
-		printf("Failed to join: %i\n", err);
+		if(pwm_debugIsLogEnabled()) printf("Failed to join: %i\n", err);
 		return;
 	}
 }
@@ -46,7 +81,7 @@ bool pwm_sysIsRunning() {
 
 void pwm_sysHandleEvent(void *data, uint64_t count) {
 	pthread_mutex_lock(&pwm_data->mutex);
-	printf("Got %lu events\n", count);
+	if(pwm_debugIsLogEnabled()) printf("Got %lu events\n", count);
 
 	for(uint32_t i = 0; i < pwm_data->eventCount; i++) {
 		pwm_Event *event = pwm_data->events[i];
@@ -102,7 +137,7 @@ void pwm_sysHandleExit() {
 }
 
 void pwm_sysCleanup() {
-	printf("PWMixer cleaning up\n");
+	if(pwm_debugIsLogEnabled()) printf("PWMixer cleaning up\n");
 
 	for(uint32_t i = 0; i < pwm_data->objectCount; i++) {
 		pwm_IO *object = pwm_data->objects[i];
@@ -128,11 +163,11 @@ void *pwm_sysRunThread(void *data) {
 	sigemptyset(&sigmask);
 	pthread_sigmask(SIG_SETMASK, &sigmask, NULL);
 
-	printf("PWMixer is running\n");
+	if(pwm_debugIsLogEnabled()) printf("PWMixer is running\n");
 	pw_main_loop_run(pwm_data->mainLoop);
-	printf("PWMixer is exiting\n");
+	if(pwm_debugIsLogEnabled()) printf("PWMixer is exiting\n");
 	pwm_sysCleanup();
-	printf("PWMixer exit\n");
+	if(pwm_debugIsLogEnabled()) printf("PWMixer exit\n");
 	return NULL;
 }
 
@@ -150,4 +185,12 @@ void pwm_sysEnqueueEvent(pwm_Event *event) {
 void pwm_sysFreeEvent(pwm_Event *event) {
 	free(event->data);
 	free(event);
+}
+
+void pwm_debugEnableLog(bool log) {
+	pwm_log = log;
+}
+
+bool pwm_debugIsLogEnabled() {
+	return pwm_log;
 }
