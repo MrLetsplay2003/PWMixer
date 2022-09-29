@@ -49,17 +49,18 @@ void pwm_ioProcessOutput(void *data) {
 		return;
 	}
 
-	if(output->connectionCount == 0 || buf->requested == 0) {
-		pw_stream_queue_buffer(output->stream, buf);
-		return;
-	}
-
 	uint8_t *streamDat;
 	if ((streamDat = buf->buffer->datas[0].data) == NULL)
 		return;
 
 	uint32_t stride = sizeof(float) * PWM_CHANNELS;
 	uint32_t n_frames = SPA_MIN(buf->requested, buf->buffer->datas[0].maxsize / stride);
+
+	if(output->connectionCount == 0 || buf->requested == 0) {
+		memset(streamDat, 0, n_frames * stride); // Clear the buffer
+		pw_stream_queue_buffer(output->stream, buf);
+		return;
+	}
 
 	for(uint32_t i = 0; i < output->connectionCount; i++) {
 		pwm_Connection *con = output->connections[i];
