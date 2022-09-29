@@ -11,7 +11,7 @@ extern "C" {
 #define PWM_CHANNELS 2
 #define PWM_RATE 44100
 
-#define PWM_BUFFER_SIZE 8192
+#define PWM_BUFFER_SIZE 16384
 #define PWM_INVALID_ID 0xFFFFFFFF
 
 #define PWM_ERROR_NONE		0 // Everything is OK

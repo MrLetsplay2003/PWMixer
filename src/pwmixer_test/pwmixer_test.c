@@ -26,18 +26,18 @@ int main(int argc, char *argv[]) {
 	pwm_debugEnableLog(true);
 	pwm_sysConnect(&argc, &argv);
 
-	pwm_IO *in = pwm_ioCreateInput("To Out + Out2", true);
-	pwm_IO *in2 = pwm_ioCreateInput("To Out2 only", false);
+	pwm_IO *in = pwm_ioCreateInput("To Out", true);
+	//pwm_IO *in2 = pwm_ioCreateInput("To Out2 only", false);
 	pwm_IO *out = pwm_ioCreateOutput("Out", false);
-	pwm_IO *out2 = pwm_ioCreateOutput("Out2", true);
+	//pwm_IO *out2 = pwm_ioCreateOutput("Out2", true);
 	pwm_ioConnect(in, out);
-	pwm_ioConnect(in, out2);
-	pwm_ioConnect(in2, out2);
+	//pwm_ioConnect(in, out2);
+	//pwm_ioConnect(in2, out2);
 
 	bool loud = false;
 	while(pwm_sysIsRunning()) {
 		loud = !loud;
-		pwm_ioSetConnectionVolume(in, out, loud ? 1.0f : 0.0f);
+		//pwm_ioSetConnectionVolume(in, out, loud ? 1.0f : 0.0f);
 		usleep(1000 * 1000);
 	}
 
