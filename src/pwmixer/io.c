@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <spa/param/audio/format-utils.h>
 #include <spa/param/props.h>
+#include <spa/param/audio/layout.h>
 #include <pthread.h>
 
 #include "pwmixer.h"
@@ -137,10 +138,12 @@ void pwm_ioCreateInput0(pwm_IO *input) {
 
 	// Make sure the stream is initialized with volume = 1.0f
 	float vols[2] = {1.0f, 1.0f};
+	enum spa_audio_channel channels[2] = {SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR};
 	struct spa_pod *propsPod = spa_pod_builder_add_object(&builder,
 		SPA_TYPE_OBJECT_Props, SPA_PARAM_Props,
 		SPA_PROP_volume, SPA_POD_Float(1.0f),
-		SPA_PROP_channelVolumes, SPA_POD_Array(sizeof(float), SPA_TYPE_Float, 2, vols));
+		SPA_PROP_channelVolumes, SPA_POD_Array(sizeof(float), SPA_TYPE_Float, 2, vols),
+		SPA_PROP_channelMap, SPA_POD_Array(sizeof(enum spa_audio_channel), SPA_TYPE_Id, 2, channels));
 	params[1] = propsPod;
 
 	pw_stream_connect(stream,
@@ -192,10 +195,12 @@ void pwm_ioCreateOutput0(pwm_IO *output) {
 
 	// Make sure the stream is initialized with volume = 1.0f
 	float vols[2] = {1.0f, 1.0f};
+	enum spa_audio_channel channels[2] = {SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR};
 	struct spa_pod *propsPod = spa_pod_builder_add_object(&builder,
 		SPA_TYPE_OBJECT_Props, SPA_PARAM_Props,
 		SPA_PROP_volume, SPA_POD_Float(1.0f),
-		SPA_PROP_channelVolumes, SPA_POD_Array(sizeof(float), SPA_TYPE_Float, 2, vols));
+		SPA_PROP_channelVolumes, SPA_POD_Array(sizeof(float), SPA_TYPE_Float, 2, vols),
+		SPA_PROP_channelMap, SPA_POD_Array(sizeof(enum spa_audio_channel), SPA_TYPE_Id, 2, channels));
 	params[1] = propsPod;
 
 	pw_stream_connect(stream,
