@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <spa/param/audio/format-utils.h>
+#include <spa/param/props.h>
 #include <pthread.h>
 
 #include "pwmixer.h"
@@ -127,17 +128,28 @@ void pwm_ioCreateInput0(pwm_IO *input) {
 
 	uint8_t buf[1024];
 	struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(buf, sizeof(buf));
-	const struct spa_pod *params[1];
+	const struct spa_pod *params[2];
 	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &SPA_AUDIO_INFO_RAW_INIT(
 		.format = SPA_AUDIO_FORMAT_F32,
 		.channels = PWM_CHANNELS,
 		.rate = PWM_RATE
 	));
+
+	// Make sure the stream is initialized with volume = 1.0f
+	float vols[2] = {1.0f, 1.0f};
+	struct spa_pod *propsPod = spa_pod_builder_add_object(&builder,
+		SPA_TYPE_OBJECT_Props, SPA_PARAM_Props,
+		SPA_PROP_volume, SPA_POD_Float(1.0f),
+		SPA_PROP_channelVolumes, SPA_POD_Array(sizeof(float), SPA_TYPE_Float, 2, vols));
+	params[1] = propsPod;
+
 	pw_stream_connect(stream,
 		PW_DIRECTION_INPUT,
 		PW_ID_ANY,
 		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
-		params, 1);
+		params, 2);
+
+	//pwm_streamSetVolume(stream, 0.5f);
 }
 
 void pwm_ioCreateOutput0(pwm_IO *output) {
@@ -157,6 +169,7 @@ void pwm_ioCreateOutput0(pwm_IO *output) {
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Capture",
 			PW_KEY_MEDIA_ROLE, "Music",
+			PW_KEY_NODE_NAME, output->name,
 			NULL);
 	}
 
@@ -164,22 +177,32 @@ void pwm_ioCreateOutput0(pwm_IO *output) {
 	output->connectionCount = 0;
 
 	struct pw_stream *stream = pw_stream_new(pwm_data->core, output->name, streamProps);
+
 	pw_stream_add_listener(stream, &output->hook, &outputStreamEvents, output);
 	output->stream = stream;
 
 	uint8_t buf[1024];
 	struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(buf, sizeof(buf));
-	const struct spa_pod *params[1];
+	const struct spa_pod *params[2];
 	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &SPA_AUDIO_INFO_RAW_INIT(
 		.format = SPA_AUDIO_FORMAT_F32,
 		.channels = 2,
 		.rate = 44100
 	));
+
+	// Make sure the stream is initialized with volume = 1.0f
+	float vols[2] = {1.0f, 1.0f};
+	struct spa_pod *propsPod = spa_pod_builder_add_object(&builder,
+		SPA_TYPE_OBJECT_Props, SPA_PARAM_Props,
+		SPA_PROP_volume, SPA_POD_Float(1.0f),
+		SPA_PROP_channelVolumes, SPA_POD_Array(sizeof(float), SPA_TYPE_Float, 2, vols));
+	params[1] = propsPod;
+
 	pw_stream_connect(stream,
 		PW_DIRECTION_OUTPUT,
 		PW_ID_ANY,
 		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
-		params, 1);
+		params, 2);
 }
 
 void pwm_ioDestroy0(pwm_IO *object) {
