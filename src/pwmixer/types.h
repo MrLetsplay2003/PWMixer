@@ -33,6 +33,7 @@ struct pwm_IO {
 	uint32_t connectionCount;
 
 	float volume;
+	float lastVolume; // Volume of the last chunk of audio data
 };
 
 struct pwm_Data {

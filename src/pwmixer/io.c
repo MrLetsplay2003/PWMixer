@@ -31,6 +31,17 @@ void pwm_ioProcessInput(void *data) {
 		return;
 	}
 
+	uint32_t stride = sizeof(float) * PWM_CHANNELS;
+	uint32_t n_frames = buf->buffer->datas[0].chunk->size / stride;
+
+	float vol = 0;
+	for(uint32_t i = 0; i < n_frames; i++) {
+		for(uint32_t ch = 0; ch < PWM_CHANNELS; ch++) {
+			vol += SPA_ABS(((float *) buf->buffer->datas[0].data)[i * PWM_CHANNELS + ch]);
+		}
+	}
+	input->lastVolume = vol / (n_frames * PWM_CHANNELS);
+
 	for(uint32_t i = 0; i < input->connectionCount; i++) {
 		pwm_Connection *con = input->connections[i];
 		size_t nWrite = SPA_MIN(PWM_BUFFER_SIZE - con->bufferSize, buf->buffer->datas[0].chunk->size);
@@ -83,6 +94,14 @@ void pwm_ioProcessOutput(void *data) {
 		con->bufferSize -= nRead;
 		memmove(con->buffer, con->buffer + nRead, con->bufferSize); // Move remaining buffer
 	}
+
+	float vol = 0;
+	for(uint32_t i = 0; i < n_frames; i++) {
+		for(uint32_t ch = 0; ch < PWM_CHANNELS; ch++) {
+			vol += SPA_ABS(((float *) streamDat)[i * PWM_CHANNELS + ch]);
+		}
+	}
+	output->lastVolume = vol / (n_frames * PWM_CHANNELS);
 
 	buf->buffer->datas[0].chunk->offset = 0;
 	buf->buffer->datas[0].chunk->stride = stride;
@@ -416,4 +435,8 @@ void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume) {
 	event->data = setVolume;
 
 	pwm_sysEnqueueEvent(event);
+}
+
+float pwm_ioGetLastVolume(pwm_IO *object) {
+	return object->lastVolume;
 }

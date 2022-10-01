@@ -126,7 +126,7 @@ void pwm_sysHandleEvent(void *data, uint64_t count) {
 			}
 			default:
 			{
-				fprintf(stderr, "Got invalid event type %i, ignoring\n", event->type);
+				if(pwm_debugIsLogEnabled()) fprintf(stderr, "Got invalid event type %i, ignoring\n", event->type);
 				break;
 			}
 		}

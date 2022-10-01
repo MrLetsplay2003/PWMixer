@@ -34,10 +34,23 @@ int main(int argc, char *argv[]) {
 	//pwm_ioConnect(in, out2);
 	//pwm_ioConnect(in2, out2);
 
-	bool loud = false;
+	//bool loud = false;
 	while(pwm_sysIsRunning()) {
-		loud = !loud;
+		//loud = !loud;
 		//pwm_ioSetConnectionVolume(in, out, loud ? 1.0f : 0.0f);
+
+		/*printf("In  ");
+		for(int i = 0; i < pwm_ioGetLastVolume(in) * 100; i++) {
+			printf("#");
+		}
+		printf("\n");
+
+		printf("Out ");
+		for(int i = 0; i < pwm_ioGetLastVolume(out) * 100; i++) {
+			printf("#");
+		}
+		printf("\n");*/
+
 		usleep(1000 * 1000);
 	}
 

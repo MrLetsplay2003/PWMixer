@@ -47,6 +47,8 @@ void pwm_ioDestroy(pwm_IO *input);
 void pwm_ioSetVolume(pwm_IO *object, float volume);
 void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume);
 
+float pwm_ioGetLastVolume(pwm_IO *object);
+
 void pwm_debugEnableLog(bool log);
 bool pwm_debugIsLogEnabled();
 
