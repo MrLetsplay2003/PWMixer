@@ -151,8 +151,6 @@ void pwm_ioCreateInput0(pwm_IO *input) {
 		PW_ID_ANY,
 		PW_STREAM_FLAG_AUTOCONNECT | PW_STREAM_FLAG_MAP_BUFFERS | PW_STREAM_FLAG_RT_PROCESS,
 		params, 2);
-
-	//pwm_streamSetVolume(stream, 0.5f);
 }
 
 void pwm_ioCreateOutput0(pwm_IO *output) {
@@ -386,10 +384,11 @@ pwm_IO *pwm_ioGetByID(uint32_t id){
 }
 
 void pwm_ioDestroy(pwm_IO *object) {
+	pwm_data->objects[object->id] = NULL;
+
 	if(object->id == pwm_data->objectCount - 1) { // Object is the last object
-		pwm_data->objects = realloc(pwm_data->objects, (--pwm_data->objectCount) * sizeof(pwm_IO *));
-	}else { // Object is somewhere else, set it to NULL
-		pwm_data->objects[object->id] = NULL;
+		while(pwm_data->objectCount && !(pwm_data->objects[pwm_data->objectCount - 1])) pwm_data->objectCount--;
+		pwm_data->objects = realloc(pwm_data->objects, pwm_data->objectCount * sizeof(pwm_IO *));
 	}
 
 	pwm_EventDestroy *destroy = malloc(sizeof(pwm_EventDestroy));
