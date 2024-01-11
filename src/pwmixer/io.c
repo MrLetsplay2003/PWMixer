@@ -1,11 +1,11 @@
-#include <stdio.h>
-#include <spa/param/audio/format-utils.h>
-#include <spa/param/props.h>
-#include <spa/param/audio/layout.h>
 #include <pthread.h>
+#include <spa/param/audio/format-utils.h>
+#include <spa/param/audio/layout.h>
+#include <spa/param/props.h>
+#include <stdio.h>
 
-#include "pwmixer.h"
 #include "internal.h"
+#include "pwmixer.h"
 
 static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_stream_state state, const char *error) {
 	if(pwm_debugIsLogEnabled()) printf("%p changed state from %s to %s: %s\n", data, pw_stream_state_as_string(old), pw_stream_state_as_string(state), error);
@@ -14,13 +14,11 @@ static void streamStateChanged(void *data, enum pw_stream_state old, enum pw_str
 static const struct pw_stream_events inputStreamEvents = {
 	PW_VERSION_STREAM_EVENTS,
 	.process = pwm_ioProcessInput,
-	.state_changed = streamStateChanged
-};
+	.state_changed = streamStateChanged};
 
 static const struct pw_stream_events outputStreamEvents = {
 	PW_VERSION_STREAM_EVENTS,
-	.process = pwm_ioProcessOutput
-};
+	.process = pwm_ioProcessOutput};
 
 void pwm_ioProcessInput(void *data) {
 	pwm_IO *input = data;
@@ -63,7 +61,7 @@ void pwm_ioProcessOutput(void *data) {
 	}
 
 	uint8_t *streamDat;
-	if ((streamDat = buf->buffer->datas[0].data) == NULL)
+	if((streamDat = buf->buffer->datas[0].data) == NULL)
 		return;
 
 	uint32_t stride = sizeof(float) * PWM_CHANNELS;
@@ -131,7 +129,7 @@ void pwm_ioCreateInput0(pwm_IO *input) {
 			PW_KEY_NODE_NICK, input->name,
 			PW_KEY_NODE_DESCRIPTION, input->name,
 			NULL);
-	}else {
+	} else {
 		streamProps = pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Capture",
@@ -149,14 +147,11 @@ void pwm_ioCreateInput0(pwm_IO *input) {
 	uint8_t buf[1024];
 	struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(buf, sizeof(buf));
 	const struct spa_pod *params[2];
-	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &SPA_AUDIO_INFO_RAW_INIT(
-		.format = SPA_AUDIO_FORMAT_F32,
-		.channels = PWM_CHANNELS,
-		.rate = PWM_RATE
-	));
+	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &SPA_AUDIO_INFO_RAW_INIT(.format = SPA_AUDIO_FORMAT_F32, .channels = PWM_CHANNELS, .rate = PWM_RATE));
 
 	// Make sure the stream is initialized with volume = 1.0f
 	float vols[2] = {1.0f, 1.0f};
+
 	enum spa_audio_channel channels[2] = {SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR};
 	struct spa_pod *propsPod = spa_pod_builder_add_object(&builder,
 		SPA_TYPE_OBJECT_Props, SPA_PARAM_Props,
@@ -174,7 +169,7 @@ void pwm_ioCreateInput0(pwm_IO *input) {
 
 void pwm_ioCreateOutput0(pwm_IO *output) {
 	struct pw_properties *streamProps;
-	if(output->isSourceOrSink){
+	if(output->isSourceOrSink) {
 		streamProps = pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Capture",
@@ -184,7 +179,7 @@ void pwm_ioCreateOutput0(pwm_IO *output) {
 			PW_KEY_NODE_NICK, output->name,
 			PW_KEY_NODE_DESCRIPTION, output->name,
 			NULL);
-	}else {
+	} else {
 		streamProps = pw_properties_new(
 			PW_KEY_MEDIA_TYPE, "Audio",
 			PW_KEY_MEDIA_CATEGORY, "Capture",
@@ -204,14 +199,11 @@ void pwm_ioCreateOutput0(pwm_IO *output) {
 	uint8_t buf[1024];
 	struct spa_pod_builder builder = SPA_POD_BUILDER_INIT(buf, sizeof(buf));
 	const struct spa_pod *params[2];
-	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &SPA_AUDIO_INFO_RAW_INIT(
-		.format = SPA_AUDIO_FORMAT_F32,
-		.channels = 2,
-		.rate = 44100
-	));
+	params[0] = spa_format_audio_raw_build(&builder, SPA_PARAM_EnumFormat, &SPA_AUDIO_INFO_RAW_INIT(.format = SPA_AUDIO_FORMAT_F32, .channels = 2, .rate = 44100));
 
 	// Make sure the stream is initialized with volume = 1.0f
 	float vols[2] = {1.0f, 1.0f};
+
 	enum spa_audio_channel channels[2] = {SPA_AUDIO_CHANNEL_FL, SPA_AUDIO_CHANNEL_FR};
 	struct spa_pod *propsPod = spa_pod_builder_add_object(&builder,
 		SPA_TYPE_OBJECT_Props, SPA_PARAM_Props,
@@ -241,7 +233,7 @@ void pwm_ioDestroy0(pwm_IO *object) {
 static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Connection *con) {
 	if(*count == 0) {
 		*arr = malloc(sizeof(pwm_Connection *));
-	}else {
+	} else {
 		*arr = realloc(*arr, (*count + 1) * sizeof(pwm_Connection *));
 	}
 
@@ -397,7 +389,7 @@ uint32_t pwm_ioGetID(pwm_IO *object) {
 	return object->id;
 }
 
-pwm_IO *pwm_ioGetByID(uint32_t id){
+pwm_IO *pwm_ioGetByID(uint32_t id) {
 	if(id >= pwm_data->objectCount || id == PWM_INVALID_ID) return NULL;
 	return pwm_data->objects[id];
 }

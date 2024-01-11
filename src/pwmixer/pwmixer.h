@@ -5,8 +5,8 @@
 extern "C" {
 #endif
 
-#include <stdint.h>
 #include <stdbool.h>
+#include <stdint.h>
 
 #define PWM_CHANNELS 2
 #define PWM_RATE 44100
@@ -14,11 +14,11 @@ extern "C" {
 #define PWM_BUFFER_SIZE 16384
 #define PWM_INVALID_ID 0xFFFFFFFF
 
-#define PWM_ERROR_NONE		0 // Everything is OK
-#define PWM_ERROR_OTHER		1 // Got another error
-#define PWM_ERROR_ARG		2 // Invalid arguments
-#define PWM_ERROR_MEM		3 // Memory error, e.g. failed to allocate memory
-#define PWM_ERROR_PIPEWIRE	4 // Got a PipeWire error
+#define PWM_ERROR_NONE 0 // Everything is OK
+#define PWM_ERROR_OTHER 1 // Got another error
+#define PWM_ERROR_ARG 2 // Invalid arguments
+#define PWM_ERROR_MEM 3 // Memory error, e.g. failed to allocate memory
+#define PWM_ERROR_PIPEWIRE 4 // Got a PipeWire error
 
 typedef struct pwm_IO pwm_IO;
 typedef struct pwm_Connection pwm_Connection;
