@@ -41,14 +41,6 @@ struct pwm_Data {
 	struct pw_context *context;
 	struct pw_core *core;
 
-	struct {
-		struct pw_node *node;
-		struct pw_port **ports;
-		uint32_t portCount;
-	} *nodes;
-
-	uint32_t nodeCount;
-
 	pwm_IO **objects;
 	uint32_t objectCount;
 

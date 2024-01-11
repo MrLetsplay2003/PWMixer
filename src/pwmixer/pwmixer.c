@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include <stdio.h>
 
 #include "internal.h"
@@ -49,11 +50,13 @@ int pwm_sysConnect(int *argc, char ***argv) {
 	if((pthreadErr = pthread_create(&pwm_data->thread, NULL, pwm_sysRunThread, NULL))) {
 		if(pwm_debugIsLogEnabled()) printf("Failed to create thread: %i\n", err);
 		err = PWM_ERROR_OTHER;
-		goto cleanup_context;
+		goto cleanup_mutex;
 	}
 
 	return PWM_ERROR_NONE;
 
+cleanup_mutex:
+	pthread_mutex_destroy(&pwm_data->mutex);
 cleanup_context:
 	pw_context_destroy(pwm_data->context);
 cleanup_mainloop:
