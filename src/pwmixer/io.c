@@ -85,6 +85,10 @@ void pwm_ioProcessOutput(void *data) {
 	for(uint32_t i = 0; i < output->connectionCount; i++) {
 		pwm_Connection *con = output->connections[i];
 
+		if(con->filter != NULL) {
+			con->filter((float *) con->buffer, n_frames);
+		}
+
 		for(size_t i = 0; i < n_frames * PWM_CHANNELS; i++) {
 			*(((float *) streamDat) + i) += *(((float *) con->buffer) + i) * con->input->volume * con->volume * output->volume;
 		}
@@ -232,7 +236,7 @@ void pwm_ioDestroy0(pwm_IO *object) {
 
 static void pwm_ioAddConnection(pwm_Connection ***arr, uint32_t *count, pwm_Connection *con) {
 	if(*count == 0) {
-		*arr = malloc(sizeof(pwm_Connection *));
+		*arr = calloc(1, sizeof(pwm_Connection *));
 	} else {
 		*arr = realloc(*arr, (*count + 1) * sizeof(pwm_Connection *));
 	}
@@ -259,9 +263,10 @@ void pwm_ioConnect0(pwm_IO *in, pwm_IO *out) {
 	pwm_Connection *con = calloc(1, sizeof(pwm_Connection));
 	con->input = in;
 	con->output = out;
-	con->buffer = malloc(PWM_BUFFER_SIZE);
+	con->buffer = calloc(1, PWM_BUFFER_SIZE);
 	con->bufferSize = 0;
 	con->volume = 1.0f;
+	con->filter = NULL;
 
 	pwm_ioAddConnection(&in->connections, &in->connectionCount, con);
 	pwm_ioAddConnection(&out->connections, &out->connectionCount, con);
@@ -293,11 +298,11 @@ void pwm_ioDisconnect0(pwm_IO *in, pwm_IO *out) {
 }
 
 void pwm_ioConnect(pwm_IO *input, pwm_IO *output) {
-	pwm_EventConnect *connect = malloc(sizeof(pwm_EventConnect));
+	pwm_EventConnect *connect = calloc(1, sizeof(pwm_EventConnect));
 	connect->in = input;
 	connect->out = output;
 
-	pwm_Event *event = malloc(sizeof(pwm_Event));
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
 	event->type = PWM_EVENT_CONNECT;
 	event->data = connect;
 
@@ -305,11 +310,11 @@ void pwm_ioConnect(pwm_IO *input, pwm_IO *output) {
 }
 
 void pwm_ioDisconnect(pwm_IO *input, pwm_IO *output) {
-	pwm_EventConnect *connect = malloc(sizeof(pwm_EventConnect));
+	pwm_EventConnect *connect = calloc(1, sizeof(pwm_EventConnect));
 	connect->in = input;
 	connect->out = output;
 
-	pwm_Event *event = malloc(sizeof(pwm_Event));
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
 	event->type = PWM_EVENT_DISCONNECT;
 	event->data = connect;
 
@@ -336,10 +341,10 @@ static void pwm_ioInsertObject(pwm_IO *object) {
 }
 
 pwm_IO *pwm_ioCreateInput(const char *name, bool isSink) {
-	pwm_EventCreate *create = malloc(sizeof(pwm_EventCreate));
+	pwm_EventCreate *create = calloc(1, sizeof(pwm_EventCreate));
 
 	size_t nameLen = strlen(name);
-	char *nameChars = malloc(nameLen + 1);
+	char *nameChars = calloc(1, nameLen + 1);
 	memcpy(nameChars, name, nameLen);
 	nameChars[nameLen] = 0;
 
@@ -351,7 +356,7 @@ pwm_IO *pwm_ioCreateInput(const char *name, bool isSink) {
 
 	pwm_ioInsertObject(object);
 
-	pwm_Event *event = malloc(sizeof(pwm_Event));
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
 	event->type = PWM_EVENT_CREATE_INPUT;
 	event->data = create;
 
@@ -361,10 +366,10 @@ pwm_IO *pwm_ioCreateInput(const char *name, bool isSink) {
 }
 
 pwm_IO *pwm_ioCreateOutput(const char *name, bool isSource) {
-	pwm_EventCreate *create = malloc(sizeof(pwm_EventCreate));
+	pwm_EventCreate *create = calloc(1, sizeof(pwm_EventCreate));
 
 	size_t nameLen = strlen(name);
-	char *nameChars = malloc(nameLen + 1);
+	char *nameChars = calloc(1, nameLen + 1);
 	memcpy(nameChars, name, nameLen);
 	nameChars[nameLen] = 0;
 
@@ -376,7 +381,7 @@ pwm_IO *pwm_ioCreateOutput(const char *name, bool isSource) {
 
 	pwm_ioInsertObject(object);
 
-	pwm_Event *event = malloc(sizeof(pwm_Event));
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
 	event->type = PWM_EVENT_CREATE_OUTPUT;
 	event->data = create;
 
@@ -402,10 +407,10 @@ void pwm_ioDestroy(pwm_IO *object) {
 		pwm_data->objects = realloc(pwm_data->objects, pwm_data->objectCount * sizeof(pwm_IO *));
 	}
 
-	pwm_EventDestroy *destroy = malloc(sizeof(pwm_EventDestroy));
+	pwm_EventDestroy *destroy = calloc(1, sizeof(pwm_EventDestroy));
 	destroy->object = object;
 
-	pwm_Event *event = malloc(sizeof(pwm_Event));
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
 	event->type = PWM_EVENT_DESTROY;
 	event->data = destroy;
 
@@ -417,14 +422,27 @@ void pwm_ioSetVolume(pwm_IO *object, float volume) {
 }
 
 void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume) {
-	pwm_EventSetConnectionVolume *setVolume = malloc(sizeof(pwm_EventSetConnectionVolume));
+	pwm_EventSetConnectionVolume *setVolume = calloc(1, sizeof(pwm_EventSetConnectionVolume));
 	setVolume->in = input;
 	setVolume->out = output;
 	setVolume->volume = volume;
 
-	pwm_Event *event = malloc(sizeof(pwm_Event));
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
 	event->type = PWM_EVENT_SET_CONNECTION_VOLUME;
 	event->data = setVolume;
+
+	pwm_sysEnqueueEvent(event);
+}
+
+void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction filter) {
+	pwm_EventSetConnectionFilter *setFilter = calloc(1, sizeof(pwm_EventSetConnectionFilter));
+	setFilter->in = input;
+	setFilter->out = output;
+	setFilter->filter = filter;
+
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
+	event->type = PWM_EVENT_SET_CONNECTION_FILTER;
+	event->data = setFilter;
 
 	pwm_sysEnqueueEvent(event);
 }

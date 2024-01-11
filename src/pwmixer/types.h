@@ -18,6 +18,8 @@ struct pwm_Connection {
 	size_t bufferSize;
 
 	float volume;
+
+	pwm_FilterFunction filter;
 };
 
 struct pwm_IO {
@@ -61,6 +63,7 @@ enum pwm_EventType {
 	PWM_EVENT_CONNECT,
 	PWM_EVENT_DISCONNECT,
 	PWM_EVENT_SET_CONNECTION_VOLUME,
+	PWM_EVENT_SET_CONNECTION_FILTER,
 };
 
 struct pwm_Event {
@@ -85,6 +88,12 @@ struct pwm_EventSetConnectionVolume {
 	pwm_IO *in;
 	pwm_IO *out;
 	float volume;
+};
+
+struct pwm_EventSetConnectionFilter {
+	pwm_IO *in;
+	pwm_IO *out;
+	pwm_FilterFunction filter;
 };
 
 #ifdef __cplusplus

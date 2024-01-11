@@ -3,6 +3,7 @@
 
 #include "internal.h"
 #include "pwmixer.h"
+#include "types.h"
 
 pwm_Data *pwm_data;
 static bool pwm_log = false;
@@ -119,6 +120,13 @@ void pwm_sysHandleEvent(void *data, uint64_t count) {
 				pwm_Connection *con = pwm_ioGetConnection(setVolume->in, setVolume->out);
 				if(!con) break;
 				con->volume = setVolume->volume;
+				break;
+			}
+			case PWM_EVENT_SET_CONNECTION_FILTER: {
+				pwm_EventSetConnectionFilter *setFilter = event->data;
+				pwm_Connection *con = pwm_ioGetConnection(setFilter->in, setFilter->out);
+				if(!con) break;
+				con->filter = setFilter->filter;
 				break;
 			}
 			default: {

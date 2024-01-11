@@ -35,7 +35,7 @@ $(BUILDFOLDER)/%.o: src/pwmixer/%.c
 
 $(BINFOLDER)/pwmixer_test: src/pwmixer_test/pwmixer_test.c
 	mkdir -p $(BINFOLDER)
-	$(CC) $(CFLAGS) -L$(LIBFOLDER) $(INCLUDES) -Isrc/pwmixer/ $< $(LIBS) -Wl,-Bstatic -lpwmixer -Wl,-Bdynamic -o $@
+	$(CC) $(CFLAGS) -L$(LIBFOLDER) $(INCLUDES) -lm -Isrc/pwmixer/ $< $(LIBS) -Wl,-Bstatic -lpwmixer -Wl,-Bdynamic -o $@
 
 .PHONY: clean
 clean:

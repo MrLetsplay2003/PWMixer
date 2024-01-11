@@ -6,6 +6,7 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
+#include <stddef.h>
 #include <stdint.h>
 
 #define PWM_CHANNELS 2
@@ -20,6 +21,8 @@ extern "C" {
 #define PWM_ERROR_MEM 3 // Memory error, e.g. failed to allocate memory
 #define PWM_ERROR_PIPEWIRE 4 // Got a PipeWire error
 
+typedef void (*pwm_FilterFunction)(float *samples, size_t sampleCount);
+
 typedef struct pwm_IO pwm_IO;
 typedef struct pwm_Connection pwm_Connection;
 typedef struct pwm_Data pwm_Data;
@@ -30,6 +33,7 @@ typedef struct pwm_EventCreate pwm_EventCreate;
 typedef struct pwm_EventDestroy pwm_EventDestroy;
 typedef struct pwm_EventConnect pwm_EventConnect;
 typedef struct pwm_EventSetConnectionVolume pwm_EventSetConnectionVolume;
+typedef struct pwm_EventSetConnectionFilter pwm_EventSetConnectionFilter;
 
 int pwm_sysConnect(int *argc, char ***argv);
 bool pwm_sysIsRunning();
@@ -46,6 +50,7 @@ void pwm_ioDestroy(pwm_IO *input);
 
 void pwm_ioSetVolume(pwm_IO *object, float volume);
 void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume);
+void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction filter);
 
 float pwm_ioGetLastVolume(pwm_IO *object);
 
