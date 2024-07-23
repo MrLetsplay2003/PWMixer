@@ -28,7 +28,9 @@ static void doFilter(float *samples, size_t sampleCount) {
 static float buffer[BUFFER_SIZE];
 static size_t bufferIndex = BUFFER_SIZE;
 
-static void doFilter2(float *samples, size_t sampleCount) {
+static void doFilter2(float *samples, size_t sampleCount, void *userdata) {
+	float *buffer = userdata;
+
 	size_t totalSamples = sampleCount * PWM_CHANNELS;
 	printf("%zu\n", bufferIndex);
 
@@ -73,7 +75,7 @@ int main(int argc, char *argv[]) {
 	// pwm_ioConnect(in, out2);
 	// pwm_ioConnect(in2, out2);
 
-	pwm_ioSetConnectionFilter(in, out, doFilter2);
+	pwm_ioSetConnectionFilter(in, out, doFilter2, buffer);
 
 	// bool loud = false;
 	while(pwm_sysIsRunning()) {

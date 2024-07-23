@@ -20,6 +20,7 @@ struct pwm_Connection {
 	float volume;
 
 	pwm_FilterFunction filter;
+	void *filterUserdata;
 };
 
 struct pwm_IO {
@@ -94,6 +95,7 @@ struct pwm_EventSetConnectionFilter {
 	pwm_IO *in;
 	pwm_IO *out;
 	pwm_FilterFunction filter;
+	void *userdata;
 };
 
 #ifdef __cplusplus

@@ -86,7 +86,7 @@ void pwm_ioProcessOutput(void *data) {
 		pwm_Connection *con = output->connections[i];
 
 		if(con->filter != NULL) {
-			con->filter((float *) con->buffer, n_frames);
+			con->filter((float *) con->buffer, n_frames, con->filterUserdata);
 		}
 
 		for(size_t i = 0; i < n_frames * PWM_CHANNELS; i++) {
@@ -434,11 +434,12 @@ void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume) {
 	pwm_sysEnqueueEvent(event);
 }
 
-void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction filter) {
+void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction filter, void *userdata) {
 	pwm_EventSetConnectionFilter *setFilter = calloc(1, sizeof(pwm_EventSetConnectionFilter));
 	setFilter->in = input;
 	setFilter->out = output;
 	setFilter->filter = filter;
+	setFilter->userdata = userdata;
 
 	pwm_Event *event = calloc(1, sizeof(pwm_Event));
 	event->type = PWM_EVENT_SET_CONNECTION_FILTER;

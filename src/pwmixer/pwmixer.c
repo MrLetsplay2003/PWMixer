@@ -127,6 +127,7 @@ void pwm_sysHandleEvent(void *data, uint64_t count) {
 				pwm_Connection *con = pwm_ioGetConnection(setFilter->in, setFilter->out);
 				if(!con) break;
 				con->filter = setFilter->filter;
+				con->filterUserdata = setFilter->userdata;
 				break;
 			}
 			default: {

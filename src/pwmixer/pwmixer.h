@@ -21,7 +21,7 @@ extern "C" {
 #define PWM_ERROR_MEM 3 // Memory error, e.g. failed to allocate memory
 #define PWM_ERROR_PIPEWIRE 4 // Got a PipeWire error
 
-typedef void (*pwm_FilterFunction)(float *samples, size_t sampleCount);
+typedef void (*pwm_FilterFunction)(float *samples, size_t sampleCount, void *userdata);
 
 typedef struct pwm_IO pwm_IO;
 typedef struct pwm_Connection pwm_Connection;
@@ -50,7 +50,7 @@ void pwm_ioDestroy(pwm_IO *input);
 
 void pwm_ioSetVolume(pwm_IO *object, float volume);
 void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume);
-void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction filter);
+void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction filter, void *userdata);
 
 float pwm_ioGetLastVolume(pwm_IO *object);
 
