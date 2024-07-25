@@ -130,6 +130,11 @@ void pwm_sysHandleEvent(void *data, uint64_t count) {
 				con->filterUserdata = setFilter->userdata;
 				break;
 			}
+			case PWM_EVENT_RUN_IN_LOOP: {
+				pwm_EventRunInLoop *runInLoop = event->data;
+				runInLoop->callback(runInLoop->userdata);
+				break;
+			}
 			default: {
 				if(pwm_debugIsLogEnabled()) fprintf(stderr, "Got invalid event type %i, ignoring\n", event->type);
 				break;

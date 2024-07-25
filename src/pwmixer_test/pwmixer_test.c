@@ -6,6 +6,7 @@
 #include <stddef.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 
 static void handleInterrupt(int sig) {
@@ -32,10 +33,10 @@ static void doFilter2(float *samples, size_t sampleCount, void *userdata) {
 	float *buffer = userdata;
 
 	size_t totalSamples = sampleCount * PWM_CHANNELS;
-	printf("%zu\n", bufferIndex);
+	// printf("%zu\n", bufferIndex);
 
 	size_t echoSamples = bufferIndex < totalSamples ? bufferIndex : totalSamples;
-	printf("SAMPLES: %zu / %zu\n", echoSamples, totalSamples);
+	// printf("SAMPLES: %zu / %zu\n", echoSamples, totalSamples);
 	for(size_t i = 0; i < echoSamples; i++) {
 		samples[i] += buffer[i] * 0.5f;
 	}
@@ -47,7 +48,11 @@ static void doFilter2(float *samples, size_t sampleCount, void *userdata) {
 	size_t toCopy = totalSamples < freeSpace ? totalSamples : freeSpace;
 	memcpy(buffer + bufferIndex, samples, toCopy * sizeof(float));
 	bufferIndex += toCopy;
-	printf("AFTER: %zu\n", bufferIndex);
+	// printf("AFTER: %zu\n", bufferIndex);
+}
+
+static void printPid(void *userdata) {
+	printf("%s TID is %i\n", (const char *) userdata, (pid_t) syscall(SYS_gettid));
 }
 
 int main(int argc, char *argv[]) {
@@ -76,6 +81,9 @@ int main(int argc, char *argv[]) {
 	// pwm_ioConnect(in2, out2);
 
 	pwm_ioSetConnectionFilter(in, out, doFilter2, buffer);
+
+	printPid("Main thread");
+	pwm_ioRunInLoop(printPid, "PW loop thread");
 
 	// bool loud = false;
 	while(pwm_sysIsRunning()) {

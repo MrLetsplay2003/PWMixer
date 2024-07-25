@@ -448,6 +448,18 @@ void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction
 	pwm_sysEnqueueEvent(event);
 }
 
+void pwm_ioRunInLoop(pwm_Callback callback, void *userdata) {
+	pwm_EventRunInLoop *runInLoop = calloc(1, sizeof(pwm_EventRunInLoop));
+	runInLoop->callback = callback;
+	runInLoop->userdata = userdata;
+
+	pwm_Event *event = calloc(1, sizeof(pwm_Event));
+	event->type = PWM_EVENT_RUN_IN_LOOP;
+	event->data = runInLoop;
+
+	pwm_sysEnqueueEvent(event);
+}
+
 float pwm_ioGetLastVolume(pwm_IO *object) {
 	return object->lastVolume;
 }

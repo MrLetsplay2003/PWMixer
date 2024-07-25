@@ -65,6 +65,7 @@ enum pwm_EventType {
 	PWM_EVENT_DISCONNECT,
 	PWM_EVENT_SET_CONNECTION_VOLUME,
 	PWM_EVENT_SET_CONNECTION_FILTER,
+	PWM_EVENT_RUN_IN_LOOP,
 };
 
 struct pwm_Event {
@@ -95,6 +96,11 @@ struct pwm_EventSetConnectionFilter {
 	pwm_IO *in;
 	pwm_IO *out;
 	pwm_FilterFunction filter;
+	void *userdata;
+};
+
+struct pwm_EventRunInLoop {
+	pwm_Callback callback;
 	void *userdata;
 };
 

@@ -22,6 +22,7 @@ extern "C" {
 #define PWM_ERROR_PIPEWIRE 4 // Got a PipeWire error
 
 typedef void (*pwm_FilterFunction)(float *samples, size_t sampleCount, void *userdata);
+typedef void (*pwm_Callback)(void *userdata);
 
 typedef struct pwm_IO pwm_IO;
 typedef struct pwm_Connection pwm_Connection;
@@ -34,6 +35,7 @@ typedef struct pwm_EventDestroy pwm_EventDestroy;
 typedef struct pwm_EventConnect pwm_EventConnect;
 typedef struct pwm_EventSetConnectionVolume pwm_EventSetConnectionVolume;
 typedef struct pwm_EventSetConnectionFilter pwm_EventSetConnectionFilter;
+typedef struct pwm_EventRunInLoop pwm_EventRunInLoop;
 
 int pwm_sysConnect(int *argc, char ***argv);
 bool pwm_sysIsRunning();
@@ -51,6 +53,8 @@ void pwm_ioDestroy(pwm_IO *input);
 void pwm_ioSetVolume(pwm_IO *object, float volume);
 void pwm_ioSetConnectionVolume(pwm_IO *input, pwm_IO *output, float volume);
 void pwm_ioSetConnectionFilter(pwm_IO *input, pwm_IO *output, pwm_FilterFunction filter, void *userdata);
+
+void pwm_ioRunInLoop(pwm_Callback callback, void *userdata);
 
 float pwm_ioGetLastVolume(pwm_IO *object);
 
